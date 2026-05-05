@@ -1095,6 +1095,13 @@ a { color: inherit; text-decoration: none; }
   padding: 14px 16px;
   border-bottom: 1px solid var(--qlink-border);
 }
+#row-account, #row-provider, #row-reset {
+  cursor: pointer;
+  transition: background .15s;
+}
+#row-account:hover, #row-provider:hover, #row-reset:hover {
+  background: color-mix(in srgb, var(--qlink-primary) 8%, transparent);
+}
 .list-item:last-child { border-bottom: none; }
 .list-item .label { font-weight: 600; }
 .list-item .value { color: var(--qlink-text-muted); font-size: 13px; }

@@ -1757,13 +1757,22 @@ function userProviderLabel(p, email) {
 }
 
 function openAccountSheet() {
-  if (!state.user) return;
-  $('#account-row-nickname-value').textContent = state.user.name;
-  $('#account-row-email-value').textContent = state.user.email || '—';
-  $('#account-row-provider-value').textContent = userProviderLabel(state.user.provider);
-  $$('.sheet').forEach(s => s.classList.remove('open'));
-  $('#account-sheet').classList.add('open');
-  $('.sheet-backdrop').classList.add('open');
+  console.log('[QLink] openAccountSheet — user:', state.user);
+  if (!state.user) {
+    toast('로그인이 필요합니다');
+    return;
+  }
+  try {
+    $('#account-row-nickname-value').textContent = state.user.name || '닉네임 없음';
+    $('#account-row-email-value').textContent = state.user.email || '—';
+    $('#account-row-provider-value').textContent = userProviderLabel(state.user.provider);
+    $$('.sheet').forEach(s => s.classList.remove('open'));
+    $('#account-sheet').classList.add('open');
+    $('.sheet-backdrop').classList.add('open');
+  } catch (err) {
+    console.error('[QLink] openAccountSheet failed', err);
+    toast('오류: ' + err.message);
+  }
 }
 
 function openEmailChangeSheet() {
@@ -1923,6 +1932,14 @@ function renderSettings() {
     $('#btn-edit-avatar').onclick = openEditProfile;
   } else {
     card.innerHTML = '';
+  }
+  // 매 settings 렌더마다 row-account 재바인딩 (안전장치)
+  const rowAccount = $('#row-account');
+  if (rowAccount) {
+    rowAccount.onclick = () => {
+      console.log('[QLink] 계정관리 row 클릭됨');
+      openAccountSheet();
+    };
   }
   applyTheme();
 }
@@ -2461,4 +2478,12 @@ function init() {
   })();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    init();
+    console.log('[QLink] init 완료');
+  } catch (err) {
+    console.error('[QLink] init 실패!', err);
+    alert('초기화 오류: ' + err.message);
+  }
+});
