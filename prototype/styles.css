@@ -1573,6 +1573,24 @@ mark {
 .login-toggle-link:hover {
   background: color-mix(in srgb, var(--qlink-primary) 10%, transparent);
 }
+.login-guest-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--qlink-border);
+  border-radius: var(--r-md);
+  color: var(--qlink-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.login-guest-btn:hover {
+  border-color: var(--qlink-primary);
+  color: var(--qlink-primary);
+  background: color-mix(in srgb, var(--qlink-primary) 6%, transparent);
+}
 .login-divider {
   text-align: center;
   position: relative;

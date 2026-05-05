@@ -79,7 +79,7 @@ function localToCloudFolderId(localId) {
   return localId;
 }
 async function cloudSync(fn) {
-  if (!window.QLink?.cloud || !state.user) return;
+  if (!window.QLink?.cloud || !state.user || state.user.isGuest) return;
   try { await fn(window.QLink.cloud); }
   catch (err) {
     console.error('[QLink] sync error', err);
@@ -1491,6 +1491,77 @@ let pendingAvatar = '🐿️';
 
 const SUPABASE_AVAILABLE = !!window.QLink?.auth;
 
+/* ============ 게스트 모드 (시드 데이터로 둘러보기) ============ */
+function enterGuestMode() {
+  const now = Date.now();
+  const day = 86400000;
+  state.user = {
+    id: 'guest',
+    name: '게스트',
+    email: null,
+    avatar: '👋',
+    provider: 'guest',
+    joinedAt: now,
+    isGuest: true,
+  };
+  state.defaultFolderCloudId = null;
+  state.defaultFolderId = 'f-default';
+
+  state.folders = [
+    { id: 'f-default', name: '미분류', emoji: '📥', shared: false, createdAt: 0 },
+    { id: 'g-work', name: '업무', emoji: '💼', shared: false, createdAt: now - day * 6 },
+    { id: 'g-study', name: '스터디', emoji: '📚', shared: false, createdAt: now - day * 5 },
+    { id: 'g-music', name: '음악', emoji: '🎵', shared: false, createdAt: now - day * 4 },
+    { id: 'g-content', name: '콘텐츠', emoji: '🎬', shared: false, createdAt: now - day * 3 },
+    { id: 'g-team', name: '팀 자료', emoji: '👥', shared: true, sharedWith: ['민지', '서연'], createdAt: now - day * 7 },
+    { id: 'g-cafe', name: '카페 투어', emoji: '☕', shared: true, sharedWith: ['지수', '하늘', '예준'], createdAt: now - day * 2 },
+  ];
+
+  const mk = (overrides) => ({
+    id: uid('l'),
+    sourceType: 'url',
+    tags: [],
+    todoDone: false,
+    ...overrides,
+  });
+  state.links = [
+    // 업무 (3)
+    mk({ url: 'https://notion.so/team', domain: 'notion.so', title: 'Notion 팀 워크스페이스', oneLiner: '팀 노션 워크스페이스', summary: '팀 문서 + 프로젝트 관리 메인 페이지.', tags: ['notion', 'work', 'team'], folderId: 'g-work', createdAt: now - day * 5 }),
+    mk({ url: 'https://slack.com/app', domain: 'slack.com', title: 'Slack 워크스페이스', oneLiner: '슬랙 채널 정리', summary: '주요 채널 + 파트너 채널 모음.', tags: ['slack', 'work'], folderId: 'g-work', todo: '오늘 회의록 정리', reminderAt: now + 3600000 * 3, createdAt: now - day * 4 }),
+    mk({ url: 'https://docs.google.com/q3-okr', domain: 'docs.google.com', title: 'Q3 OKR 문서', oneLiner: 'Q3 분기 목표', summary: '이번 분기 핵심 결과 정리.', tags: ['okr', 'planning'], folderId: 'g-work', createdAt: now - day * 2 }),
+
+    // 스터디 (3)
+    mk({ url: 'https://react.dev/learn', domain: 'react.dev', title: 'React 공식 가이드', oneLiner: '리액트 빠른 시작', summary: 'React 19 기준 학습 가이드.', tags: ['react', 'frontend', 'docs'], folderId: 'g-study', memo: '이번 주말까지 1~5장 완독', createdAt: now - day * 6 }),
+    mk({ url: 'https://www.typescriptlang.org/docs/handbook', domain: 'typescriptlang.org', title: 'TypeScript Handbook', oneLiner: 'TS 공식 핸드북', summary: '타입스크립트 기초~고급.', tags: ['typescript', 'docs'], folderId: 'g-study', createdAt: now - day * 3 }),
+    mk({ url: 'https://leetcode.com', domain: 'leetcode.com', title: 'LeetCode', oneLiner: '알고리즘 문제 모음', summary: '코딩 인터뷰 준비.', tags: ['algorithm', 'interview'], folderId: 'g-study', todo: '하루 1문제씩', reminderAt: now + day, createdAt: now - day * 1 }),
+
+    // 음악 (2)
+    mk({ url: 'https://www.youtube.com/watch?v=rlZAaIKqpKw', domain: 'youtube.com', title: 'Steve Lacy — Bad Habit', oneLiner: '스티브 레이시 - Bad Habit', summary: '인디 R&B 명곡.', tags: ['music', 'youtube', 'rnb'], folderId: 'g-music', createdAt: now - day * 4 }),
+    mk({ url: 'https://music.youtube.com/playlist?list=focus', domain: 'music.youtube.com', title: '집중 작업용 플레이리스트', oneLiner: '평일 작업 BGM', summary: '집중에 좋은 LoFi/인디 모음.', tags: ['music', 'playlist'], folderId: 'g-music', memo: '카페 갈 때 듣기 좋음', createdAt: now - 3600000 * 8 }),
+
+    // 콘텐츠 (3)
+    mk({ url: 'https://www.youtube.com/watch?v=design-talk', domain: 'youtube.com', title: '디자이너 인터뷰 영상', oneLiner: '갤러리데일 인터뷰', summary: '국내 디자이너 인터뷰.', tags: ['youtube', 'design'], folderId: 'g-content', createdAt: now - day * 6 }),
+    mk({ url: 'https://www.youtube.com/watch?v=spring-style', domain: 'youtube.com', title: '봄 스타일링 가이드', oneLiner: '봄 코디 영상', summary: '계절 스타일링 추천.', tags: ['youtube', 'fashion'], folderId: 'g-content', createdAt: now - day * 3 }),
+    mk({ url: 'https://www.instagram.com/p/cafe-interior', domain: 'instagram.com', title: '카페 인테리어 모음', oneLiner: '인스타 카페 인테리어', summary: '예쁜 카페 모음 게시물.', tags: ['instagram', 'interior'], folderId: 'g-content', sourceType: 'qr', createdAt: now - 3600000 * 12 }),
+
+    // 팀 자료 (shared, 2)
+    mk({ url: 'https://notion.so/team-wiki', domain: 'notion.so', title: 'Notion 팀 위키', oneLiner: '팀 노션 위키', summary: '온보딩·문서·정책 모음.', tags: ['notion', 'team', 'wiki'], folderId: 'g-team', createdAt: now - day * 7 }),
+    mk({ url: 'https://drive.google.com/drive/team-shared', domain: 'drive.google.com', title: '공유 드라이브', oneLiner: '팀 공유 드라이브', summary: '디자인 자산 + 자료 폴더.', tags: ['drive', 'team'], folderId: 'g-team', createdAt: now - day * 5 }),
+
+    // 카페 투어 (shared, 3)
+    mk({ url: 'https://map.naver.com/anguk-cafes', domain: 'map.naver.com', title: '안국 카페 모음', oneLiner: '안국역 카페 추천', summary: '주말에 다녀온 카페들.', tags: ['cafe', 'anguk'], folderId: 'g-cafe', createdAt: now - day * 2 }),
+    mk({ url: 'https://blog.naver.com/seongsu-cafes', domain: 'blog.naver.com', title: '성수동 카페 리스트', oneLiner: '성수동 카페 순례기', summary: '주말에 가볼 곳들.', tags: ['cafe', 'seongsu'], folderId: 'g-cafe', todo: '이번 주말 한 곳 다녀오기', reminderAt: now + day * 2, createdAt: now - day * 1 }),
+    mk({ url: 'https://www.instagram.com/explore/cafe-hotplace', domain: 'instagram.com', title: '인스타 핫플 카페', oneLiner: 'IG 핫플 카페', summary: '요즘 떠오르는 카페 인스타.', tags: ['instagram', 'cafe', 'hotplace'], folderId: 'g-cafe', sourceType: 'qr', createdAt: now - 3600000 * 8 }),
+  ];
+
+  saveState();
+  $('.app-header').style.display = '';
+  $('.tab-bar').style.display = '';
+  $('#fab').style.display = '';
+  goHome();
+  toast('게스트 모드 시작 ✨ 자유롭게 둘러보세요');
+}
+
 async function tryRestoreSession() {
   if (!SUPABASE_AVAILABLE) return false;
   try {
@@ -1736,12 +1807,20 @@ function saveEditProfile() {
 }
 
 async function logout() {
-  if (!confirm('로그아웃하시겠어요?')) return;
-  if (SUPABASE_AVAILABLE) {
+  const wasGuest = state.user?.isGuest;
+  if (!confirm(wasGuest ? '게스트 모드를 종료할까요?' : '로그아웃하시겠어요?')) return;
+  if (SUPABASE_AVAILABLE && !wasGuest) {
     try { await window.QLink.auth.signOut(); }
     catch (e) { console.warn('signOut error', e); }
   }
-  state.user = null;
+  // 게스트는 데이터까지 같이 정리
+  if (wasGuest) {
+    state.user = null;
+    state.folders = [{ id: 'f-default', name: '미분류', emoji: '📥', shared: false, createdAt: 0 }];
+    state.links = [];
+  } else {
+    state.user = null;
+  }
   saveState();
   showLogin();
 }
@@ -1777,6 +1856,7 @@ function openAccountSheet() {
 
 function openEmailChangeSheet() {
   if (!state.user) return;
+  if (state.user.isGuest) { toast('게스트 모드에서는 사용할 수 없어요. 회원가입 후 이용해주세요.'); return; }
   $('#current-email-display').value = state.user.email;
   $('#new-email-input').value = '';
   $$('.sheet').forEach(s => s.classList.remove('open'));
@@ -1806,6 +1886,7 @@ async function changeEmail() {
 }
 
 function openPasswordChangeSheet() {
+  if (state.user?.isGuest) { toast('게스트 모드에서는 사용할 수 없어요. 회원가입 후 이용해주세요.'); return; }
   $('#new-password-input').value = '';
   $('#new-password-confirm').value = '';
   $$('.sheet').forEach(s => s.classList.remove('open'));
@@ -1836,7 +1917,20 @@ async function changePassword() {
 }
 
 async function deleteAccount() {
-  if (!state.user || !window.QLink?.sb) return;
+  if (!state.user) return;
+  if (state.user.isGuest) {
+    // 게스트는 그냥 로그아웃과 동일
+    state.user = null;
+    state.folders = [{ id: 'f-default', name: '미분류', emoji: '📥', shared: false, createdAt: 0 }];
+    state.links = [];
+    saveState();
+    $$('.sheet').forEach(s => s.classList.remove('open'));
+    $('.sheet-backdrop').classList.remove('open');
+    showLogin();
+    setTimeout(() => toast('게스트 데이터가 정리되었어요'), 200);
+    return;
+  }
+  if (!window.QLink?.sb) return;
   // profile 삭제 → cascade 로 folders, links, folder_members 모두 정리됨
   try {
     const { error } = await window.QLink.sb.from('profiles').delete().eq('id', state.user.id);
@@ -2480,8 +2574,19 @@ function init() {
       .observe(sheet, { attributes: true, attributeFilter: ['class'] });
   });
   applyTheme();
-  // Supabase 세션 우선 복원, 안 되면 로그인 화면
+  // 게스트 버튼
+  $('#btn-login-guest')?.addEventListener('click', enterGuestMode);
+
+  // 부팅 라우팅: 게스트 → 홈 / 세션 복원 → 홈 / 그 외 → 로그인
   (async () => {
+    if (state.user?.isGuest) {
+      $('.app-header').style.display = '';
+      $('.tab-bar').style.display = '';
+      $('#fab').style.display = '';
+      goHome();
+      renderFolders();
+      return;
+    }
     const restored = await tryRestoreSession();
     if (restored) {
       goHome();
