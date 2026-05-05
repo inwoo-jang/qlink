@@ -1555,6 +1555,7 @@ function enterGuestMode() {
   ];
 
   saveState();
+  applyUserTheme();
   $('.app-header').style.display = '';
   $('.tab-bar').style.display = '';
   $('#fab').style.display = '';
@@ -1570,6 +1571,7 @@ async function tryRestoreSession() {
     const data = await window.QLink.auth.getProfile();
     if (!data) return false;
     state.user = profileToUser(data.user, data.profile);
+    applyUserTheme();
     await loadCloudData();
     saveState();
     return true;
@@ -1708,6 +1710,11 @@ function showLogin() {
   // 로그인/회원가입 모드 리셋 (지난 상태 흔적 제거)
   setLoginMode('signin');
   pendingLogin = null;
+  // 로그인 화면은 항상 라이트 + 핑크 (이전 사용자 테마 흔적 제거)
+  state.settings.theme = 'light';
+  state.settings.accent = 'pink';
+  saveState();
+  applyTheme();
 }
 
 function showLoginStep2(login) {
@@ -1792,6 +1799,7 @@ async function finishLogin() {
 
 function loginAs(user) {
   state.user = { ...user, joinedAt: user.joinedAt || Date.now() };
+  applyUserTheme();
   saveState();
   // 헤더·탭바·FAB 복원
   $('.app-header').style.display = '';
@@ -2073,6 +2081,41 @@ function applyTheme() {
   document.documentElement.setAttribute('data-accent', state.settings.accent || 'pink');
 }
 
+/* ============ 사용자별 테마 (localStorage 네임스페이스) ============ */
+function userThemeKey(userId) { return `qlink:theme:${userId || 'default'}`; }
+
+function loadUserTheme(userId) {
+  if (!userId) return { theme: 'light', accent: 'pink' };
+  try {
+    const raw = localStorage.getItem(userThemeKey(userId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        theme: parsed.theme === 'dark' ? 'dark' : 'light',
+        accent: ['pink','blue','gray'].includes(parsed.accent) ? parsed.accent : 'pink',
+      };
+    }
+  } catch {}
+  return { theme: 'light', accent: 'pink' };
+}
+
+function saveUserTheme() {
+  if (!state.user?.id) return;
+  localStorage.setItem(userThemeKey(state.user.id), JSON.stringify({
+    theme: state.settings.theme,
+    accent: state.settings.accent,
+  }));
+}
+
+function applyUserTheme() {
+  if (!state.user?.id) return;
+  const t = loadUserTheme(state.user.id);
+  state.settings.theme = t.theme;
+  state.settings.accent = t.accent;
+  saveState();
+  applyTheme();
+}
+
 function openProviderSheet(returnTo = null) {
   // 추가 시트에서 진입 시 → add-sheet 잠시 닫고 provider 띄움
   if (returnTo === 'add') {
@@ -2344,6 +2387,7 @@ function init() {
     sw.onclick = () => {
       state.settings.accent = sw.dataset.accent;
       saveState();
+      saveUserTheme();
       renderSettings();
       toast(`하이라이트: ${({pink:'핑크',blue:'블루',gray:'그레이'})[sw.dataset.accent]}`);
     };
@@ -2355,7 +2399,7 @@ function init() {
   };
   $('#toggle-theme').onclick = () => {
     state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
-    saveState(); renderSettings();
+    saveState(); saveUserTheme(); renderSettings();
   };
   $('#row-account').onclick = openAccountSheet;
   $('#btn-account-close').onclick = () => {
