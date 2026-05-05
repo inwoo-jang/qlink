@@ -1578,6 +1578,51 @@ function profileToUser(authUser, profile) {
   };
 }
 
+let pendingEmailVerify = null; // { email }
+
+function showEmailWaitModal(email) {
+  pendingEmailVerify = { email };
+  $('#email-wait-address').textContent = email;
+  $('#email-wait-status').classList.remove('success');
+  $('#email-wait-status .email-wait-status-text').textContent = '인증 대기 중...';
+  $$('.sheet').forEach(s => s.classList.remove('open'));
+  $('#email-wait-sheet').classList.add('open');
+  $('.sheet-backdrop').classList.add('open');
+}
+
+function closeEmailWaitModal() {
+  pendingEmailVerify = null;
+  $('#email-wait-sheet').classList.remove('open');
+  $('.sheet-backdrop').classList.remove('open');
+}
+
+async function handleEmailConfirmedSession() {
+  if (!pendingEmailVerify) return;
+  const email = pendingEmailVerify.email;
+  // UI: 성공 표시
+  $('#email-wait-status').classList.add('success');
+  $('#email-wait-status .email-wait-status-text').textContent = '인증 완료 ✓';
+  setTimeout(() => {
+    closeEmailWaitModal();
+    // 세션은 이미 잡혀있음 — 프로필 설정 단계로 직행
+    showLoginStep2({
+      provider: 'email',
+      email,
+      defaultName: email.split('@')[0],
+      avatar: '🌸',
+    });
+  }, 800);
+}
+
+// Supabase Auth 상태 변화 리스너 (이메일 인증 자동 감지)
+if (window.QLink?.sb) {
+  window.QLink.sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && pendingEmailVerify) {
+      handleEmailConfirmedSession();
+    }
+  });
+}
+
 function avatarHtml(content) {
   if (!content) return '🙂';
   if (typeof content === 'string' && content.startsWith('data:')) {
@@ -2213,19 +2258,31 @@ function init() {
     btn.disabled = true; btn.textContent = loginMode === 'signin' ? '로그인 중...' : '가입 중...';
     try {
       if (loginMode === 'signup') {
-        const { error } = await sb.auth.signUp({ email, password: pw });
+        const { data, error } = await sb.auth.signUp({
+          email, password: pw,
+          options: {
+            emailRedirectTo: window.location.origin + window.location.pathname,
+          },
+        });
         if (error) {
           const msg = error.message || '';
           if (/already|registered/i.test(msg)) {
             toast('이미 가입된 이메일이에요 — 로그인 탭으로 전환합니다');
             setLoginMode('signin');
+          } else if (/rate limit|too many/i.test(msg)) {
+            toast('잠시 후 다시 시도해주세요 (메일 발송 한도 초과)');
           } else {
             toast('가입 실패: ' + msg);
           }
           return;
         }
-        // 가입 성공 → 프로필 설정 단계
-        showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
+        // 이메일 인증 OFF → 즉시 세션 발급, 프로필 설정 단계
+        if (data.session) {
+          showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
+          return;
+        }
+        // 이메일 인증 ON → 메일 발송됨, 대기 모달
+        showEmailWaitModal(email);
       } else {
         // 로그인
         const { error } = await sb.auth.signInWithPassword({ email, password: pw });
@@ -2277,6 +2334,31 @@ function init() {
       toast(err.message);
     }
   }
+  // 이메일 인증 대기 모달 버튼들
+  $('#btn-email-resend').onclick = async () => {
+    if (!pendingEmailVerify) return;
+    const btn = $('#btn-email-resend');
+    btn.disabled = true; btn.textContent = '발송 중...';
+    try {
+      const { error } = await window.QLink.sb.auth.resend({
+        type: 'signup',
+        email: pendingEmailVerify.email,
+        options: { emailRedirectTo: window.location.origin + window.location.pathname },
+      });
+      if (error) {
+        toast(/rate limit|too many/i.test(error.message) ? '잠시 후 다시 시도해주세요' : error.message);
+      } else {
+        toast('인증 메일을 다시 보냈어요 📨');
+      }
+    } finally {
+      btn.disabled = false; btn.textContent = '메일 다시 보내기';
+    }
+  };
+  $('#btn-email-cancel').onclick = () => {
+    closeEmailWaitModal();
+    // 입력값 그대로 두고 회원가입 모드 유지
+  };
+
   // 간편 로그인은 일단 비활성 — 추후 다시 추가 시 핸들러 복구
   // $('#btn-login-google')?.addEventListener('click', () => loginWithOAuth('google'));
   // $('#btn-login-kakao')?.addEventListener('click', () => loginWithOAuth('kakao'));

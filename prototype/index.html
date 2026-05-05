@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#4F46E5" />
   <title>큐링크 (QLink) — 프로토타입</title>
-  <link rel="stylesheet" href="styles.css?v=36" />
+  <link rel="stylesheet" href="styles.css?v=37" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -21,9 +21,9 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
   <!-- Supabase JS SDK + 설정 + 클라이언트 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=36"></script>
-  <script src="supabase-client.js?v=36"></script>
-  <script src="supabase-data.js?v=36"></script>
+  <script src="supabase-config.js?v=37"></script>
+  <script src="supabase-client.js?v=37"></script>
+  <script src="supabase-data.js?v=37"></script>
 </head>
 <body>
   <div class="device-frame">
@@ -294,6 +294,30 @@
       </div>
     </div>
 
+    <!-- =============== 시트: 이메일 인증 대기 =============== -->
+    <div class="sheet" id="email-wait-sheet">
+      <div class="sheet-handle"></div>
+      <div class="email-wait">
+        <div class="email-wait-emoji">📧</div>
+        <h2 class="email-wait-title">메일을 확인해주세요</h2>
+        <p class="email-wait-body">
+          <strong id="email-wait-address">your@email.com</strong> 으로<br/>
+          가입 확인 메일을 보냈어요.<br/>
+          메일에서 <strong>이메일 인증하기</strong> 버튼을 누르면<br/>
+          이 화면에서 자동으로 로그인됩니다.
+        </p>
+        <div class="email-wait-status" id="email-wait-status">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="email-wait-status-text">인증 대기 중...</span>
+        </div>
+        <p class="email-wait-help">⏱️ 링크는 15분간 유효해요</p>
+        <div class="sheet-stack" style="margin-top:16px">
+          <button class="btn btn-secondary" id="btn-email-resend">메일 다시 보내기</button>
+          <button class="btn btn-ghost" id="btn-email-cancel">다시 가입하기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- =============== 시트: FAB 메뉴 (폴더 화면) =============== -->
     <div class="sheet" id="fab-menu-sheet">
       <div class="sheet-handle"></div>
@@ -509,6 +533,6 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <script src="app.js?v=36"></script>
+  <script src="app.js?v=37"></script>
 </body>
 </html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QLINK 가입 확인</title>
+  <style>
+    body { margin:0; padding:0; background:#F5EAFF; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif; }
+    a { color: inherit; }
+    @media (max-width: 520px) {
+      .qlink-card { margin: 16px !important; }
+      .qlink-pad { padding: 28px 22px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:linear-gradient(135deg, #FFF5FA 0%, #F5EAFF 100%);">
+  <div style="padding:32px 16px;">
+    <div class="qlink-card" style="max-width:480px; margin:0 auto; background:#FFFFFF; border-radius:24px; overflow:hidden; box-shadow:0 12px 40px rgba(255,107,157,.18);">
+
+      <!-- HERO -->
+      <div class="qlink-pad" style="padding:48px 32px 36px; text-align:center; background:linear-gradient(135deg, #FFE5EC 0%, #F3E5FF 100%);">
+        <div style="font-size:14px; margin-bottom:6px;">✨</div>
+        <div style="font-family:'Outfit', -apple-system, sans-serif; font-size:46px; font-weight:900; letter-spacing:0.06em; line-height:1;
+                    background-image: linear-gradient(135deg, #FF6B9D 0%, #C589E8 50%, #8FA3FF 100%);
+                    -webkit-background-clip:text; background-clip:text; color:transparent;">QLINK</div>
+        <div style="font-size:14px; margin-top:6px;">💖</div>
+        <p style="margin:14px 0 0; color:#9B6E84; font-size:13px; font-weight:700; line-height:1.6;">
+          링크와 QR을 AI가 정리해주는<br/>스마트 북마크
+        </p>
+      </div>
+
+      <!-- BODY -->
+      <div class="qlink-pad" style="padding:36px 32px;">
+        <h1 style="margin:0 0 14px; font-size:22px; font-weight:900; color:#3D1A2E; line-height:1.4; letter-spacing:-0.01em;">
+          반가워요 💖<br/>가입을 마무리해주세요
+        </h1>
+        <p style="margin:0 0 28px; color:#6B6075; font-size:14px; line-height:1.7;">
+          QLINK 회원가입을 진행해주셔서 감사해요.<br/>
+          아래 버튼을 눌러 이메일 인증을 완료하면 바로 시작할 수 있어요.
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%; margin-bottom:24px;">
+          <tr>
+            <td align="center">
+              <a href="{{ .ConfirmationURL }}"
+                 style="display:inline-block; padding:15px 36px; min-width:200px;
+                        background-image:linear-gradient(135deg, #FF6B9D 0%, #C589E8 50%, #8FA3FF 100%);
+                        color:#FFFFFF; text-decoration:none; text-align:center;
+                        border-radius:14px; font-weight:900; font-size:15px;
+                        letter-spacing:-0.01em;
+                        box-shadow:0 6px 18px rgba(255,107,157,.45);">
+                이메일 인증하기 →
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0; color:#9B6E84; font-size:11px; line-height:1.7; text-align:center;">
+          버튼이 안 보이면 아래 링크를 복사해서 브라우저에 붙여넣어 주세요:<br/>
+          <a href="{{ .ConfirmationURL }}" style="color:#FF6B9D; word-break:break-all;">{{ .ConfirmationURL }}</a>
+        </p>
+      </div>
+
+      <!-- INFO STRIP -->
+      <div style="padding:18px 32px; background:#FFEFF6; border-top:1px solid #FFC4D6;">
+        <p style="margin:0; color:#9B6E84; font-size:11px; line-height:1.7; text-align:center;">
+          🕒 이 인증 링크는 <strong style="color:#FF6B9D;">15분 동안</strong> 유효해요.<br/>
+          본인이 가입한 적 없다면 이 메일은 무시해주셔도 됩니다.
+        </p>
+      </div>
+
+      <!-- FOOTER -->
+      <div style="padding:22px 32px; background:#FFFFFF; text-align:center;">
+        <p style="margin:0; color:#9B6E84; font-size:11px; font-weight:700; letter-spacing:0.04em;">
+          © QLINK · ✨ smart bookmark
+        </p>
+      </div>
+
+    </div>
+    <p style="max-width:480px; margin:14px auto 0; padding:0 16px; color:#9B6E84; font-size:10px; text-align:center; line-height:1.6;">
+      이 메일은 QLINK 가입 인증을 위해 자동 발송되었어요.
+    </p>
+  </div>
+</body>
+</html>
