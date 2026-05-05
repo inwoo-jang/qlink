@@ -1455,9 +1455,38 @@ function setActiveTab(tab) {
   $$('.tab-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
 }
 
-/* ============ 인증 (mock) ============ */
-let pendingLogin = null;   // { provider, email, defaultName }
+/* ============ 인증 (Supabase 연동) ============ */
+let pendingLogin = null;   // { provider, email, defaultName, password }
 let pendingAvatar = '🐿️';
+
+const SUPABASE_AVAILABLE = !!window.QLink?.auth;
+
+async function tryRestoreSession() {
+  if (!SUPABASE_AVAILABLE) return false;
+  try {
+    const session = await window.QLink.auth.getSession();
+    if (!session) return false;
+    const data = await window.QLink.auth.getProfile();
+    if (!data) return false;
+    state.user = profileToUser(data.user, data.profile);
+    saveState();
+    return true;
+  } catch (e) {
+    console.warn('[QLink] 세션 복원 실패', e);
+    return false;
+  }
+}
+
+function profileToUser(authUser, profile) {
+  return {
+    id: authUser.id,
+    name: profile.display_name,
+    email: authUser.email,
+    avatar: profile.avatar || '🌸',
+    provider: profile.provider || 'email',
+    joinedAt: new Date(profile.created_at).getTime(),
+  };
+}
 
 function avatarHtml(content) {
   if (!content) return '🙂';
@@ -1524,10 +1553,36 @@ function handleAvatarUpload(fileInput, previewId, gridId) {
   reader.readAsDataURL(file);
 }
 
-function finishLogin() {
+async function finishLogin() {
   const nickname = $('#login-nickname').value.trim();
   if (!nickname) { toast('닉네임을 입력해주세요'); return; }
   if (!pendingLogin) return;
+
+  if (SUPABASE_AVAILABLE) {
+    const btn = $('#btn-login-finish');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      await window.QLink.auth.updateProfile({
+        display_name: nickname,
+        avatar: pendingAvatar,
+        provider: pendingLogin.provider,
+      });
+      await tryRestoreSession();
+      pendingLogin = null;
+      $('.app-header').style.display = '';
+      $('.tab-bar').style.display = '';
+      $('#fab').style.display = '';
+      goHome();
+      toast(`${nickname}님, 환영해요 ✨`);
+    } catch (err) {
+      toast('프로필 저장 실패 — ' + (err.message || ''));
+    } finally {
+      btn.disabled = false; btn.textContent = '시작하기';
+    }
+    return;
+  }
+
+  // Supabase 미사용 폴백
   loginAs({
     name: nickname,
     email: pendingLogin.email,
@@ -1574,8 +1629,12 @@ function saveEditProfile() {
   toast('프로필이 수정되었어요 ✨');
 }
 
-function logout() {
+async function logout() {
   if (!confirm('로그아웃하시겠어요?')) return;
+  if (SUPABASE_AVAILABLE) {
+    try { await window.QLink.auth.signOut(); }
+    catch (e) { console.warn('signOut error', e); }
+  }
   state.user = null;
   saveState();
   showLogin();
@@ -2028,31 +2087,43 @@ function init() {
     setTimeout(() => toast('탈퇴가 완료되었어요. 안녕히 가세요 👋'), 200);
   };
 
-  // 로그인 화면 — 스텝 1
-  $('#btn-login-email').onclick = () => {
+  // 로그인 화면 — 스텝 1 (Supabase 이메일 인증)
+  $('#btn-login-email').onclick = async () => {
     const email = $('#login-email').value.trim();
     const pw = $('#login-password').value;
     if (!/^.+@.+\..+$/.test(email)) { toast('이메일을 확인해주세요'); return; }
-    if (!pw) { toast('비밀번호를 입력해주세요'); return; }
-    showLoginStep2({
-      provider: 'email',
-      email,
-      defaultName: email.split('@')[0],
-      avatar: '🌸',
-    });
+    if (pw.length < 6) { toast('비밀번호는 6자 이상이어야 해요'); return; }
+    if (!SUPABASE_AVAILABLE) {
+      // 폴백: 로컬 mock
+      showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
+      return;
+    }
+    const btn = $('#btn-login-email');
+    btn.disabled = true; btn.textContent = '로그인 중...';
+    try {
+      const { isNew } = await window.QLink.auth.signInOrUp(email, pw);
+      if (isNew) {
+        // 신규 가입 → 프로필 설정 단계
+        showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
+      } else {
+        // 기존 사용자 → 프로필 로드 후 홈
+        await tryRestoreSession();
+        toast(`${state.user.name}님, 다시 만나서 반가워요 ✨`);
+        // 헤더·탭바 복원
+        $('.app-header').style.display = '';
+        $('.tab-bar').style.display = '';
+        $('#fab').style.display = '';
+        goHome();
+      }
+    } catch (err) {
+      const msg = err.message || '로그인 실패';
+      toast(/already registered/i.test(msg) ? '이미 가입된 이메일이에요. 비밀번호를 확인해주세요.' : msg);
+    } finally {
+      btn.disabled = false; btn.textContent = '다음';
+    }
   };
-  $('#btn-login-google').onclick = () => showLoginStep2({
-    provider: 'google',
-    email: 'daram@gmail.com',
-    defaultName: '다람이',
-    avatar: '🐿️',
-  });
-  $('#btn-login-kakao').onclick = () => showLoginStep2({
-    provider: 'kakao',
-    email: 'inwoo@kakao.com',
-    defaultName: '인우',
-    avatar: '🐿️',
-  });
+  $('#btn-login-google').onclick = () => toast('Google 로그인은 곧 지원 예정 (OAuth 셋업 필요)');
+  $('#btn-login-kakao').onclick = () => toast('카카오 로그인은 곧 지원 예정 (OAuth 셋업 필요)');
   // 로그인 화면 — 스텝 2
   $('#btn-login-finish').onclick = finishLogin;
   $('#btn-login-back').onclick = () => {
@@ -2074,12 +2145,18 @@ function init() {
       .observe(sheet, { attributes: true, attributeFilter: ['class'] });
   });
   applyTheme();
-  if (!state.user) {
-    showLogin();
-  } else {
-    goHome();
-  }
-  renderFolders();
+  // Supabase 세션 우선 복원, 안 되면 로그인 화면
+  (async () => {
+    const restored = await tryRestoreSession();
+    if (restored) {
+      goHome();
+    } else {
+      state.user = null;
+      saveState();
+      showLogin();
+    }
+    renderFolders();
+  })();
 }
 
 document.addEventListener('DOMContentLoaded', init);

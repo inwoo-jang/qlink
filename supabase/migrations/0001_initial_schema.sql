@@ -53,15 +53,8 @@ create index idx_links_owner_created on public.links(owner_id, created_at desc);
 create index idx_links_folder on public.links(folder_id);
 create index idx_links_tags on public.links using gin(tags);
 
--- 풀텍스트 검색용 인덱스 (한글 'simple' 토크나이저)
-create index idx_links_search on public.links using gin(
-  to_tsvector('simple',
-    coalesce(title, '') || ' ' ||
-    coalesce(summary, '') || ' ' ||
-    coalesce(one_liner, '') || ' ' ||
-    array_to_string(tags, ' ')
-  )
-);
+-- 풀텍스트 검색은 v1에선 클라이언트 ILIKE 로 처리.
+-- 사용자가 늘어나면 IMMUTABLE 래퍼 함수 + tsvector 인덱스로 추가 예정.
 
 -- folder_invites: 공유 초대 토큰
 create table public.folder_invites (
