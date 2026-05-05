@@ -1447,12 +1447,25 @@ mark {
   font-size: 56px; font-weight: 900;
   letter-spacing: 0.05em;
   text-align: center;
-  background: var(--grad-primary);
+  background-image: linear-gradient(135deg, #FF6B9D 0%, #C589E8 50%, #8FA3FF 100%);
   background-size: 200% 200%;
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: shimmer 4s ease-in-out infinite;
+  animation: login-logo-cycle 3s ease-in-out infinite, shimmer 4s ease-in-out infinite;
   margin-bottom: 4px;
   line-height: 1;
+}
+
+/* 로고 컬러 자동 사이클: 핑크 → 블루 → 그레이 → 다시 핑크 */
+@keyframes login-logo-cycle {
+  0%, 100% {
+    background-image: linear-gradient(135deg, #FF6B9D 0%, #C589E8 50%, #8FA3FF 100%);
+  }
+  33% {
+    background-image: linear-gradient(135deg, #4F8FFF 0%, #93B5FC 50%, #C589E8 100%);
+  }
+  66% {
+    background-image: linear-gradient(135deg, #6B7280 0%, #9CA3AF 50%, #D1D5DB 100%);
+  }
 }
 .login-tagline {
   text-align: center;
@@ -1462,6 +1475,29 @@ mark {
   line-height: 1.6;
 }
 .login-stack { display: flex; flex-direction: column; gap: 8px; }
+.login-toggle-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--qlink-border);
+  font-size: 13px;
+  color: var(--qlink-text-muted);
+  font-weight: 600;
+}
+.login-toggle-link {
+  background: none;
+  border: none;
+  color: var(--qlink-primary);
+  font-size: 13px; font-weight: 800;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  transition: background .15s;
+}
+.login-toggle-link:hover {
+  background: color-mix(in srgb, var(--qlink-primary) 10%, transparent);
+}
 .login-divider {
   text-align: center;
   position: relative;

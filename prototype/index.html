@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#4F46E5" />
   <title>큐링크 (QLink) — 프로토타입</title>
-  <link rel="stylesheet" href="styles.css?v=31" />
+  <link rel="stylesheet" href="styles.css?v=36" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -21,8 +21,9 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
   <!-- Supabase JS SDK + 설정 + 클라이언트 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=31"></script>
-  <script src="supabase-client.js?v=31"></script>
+  <script src="supabase-config.js?v=36"></script>
+  <script src="supabase-client.js?v=36"></script>
+  <script src="supabase-data.js?v=36"></script>
 </head>
 <body>
   <div class="device-frame">
@@ -51,22 +52,17 @@
       <!-- 스텝 1: 방법 선택 -->
       <div class="login-content" id="login-step-1">
         <div class="login-logo">QLINK</div>
-        <p class="login-tagline">링크와 QR을 AI가 정리해주는<br/>핑크빛 북마크 ✨</p>
+        <p class="login-tagline">링크와 QR을 AI가 정리해주는 스마트 북마크 ✨</p>
         <div class="login-stack">
           <input class="input" id="login-email" type="email" placeholder="이메일" autocomplete="email" />
           <input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
-          <button class="btn btn-primary" id="btn-login-email">다음</button>
+          <input class="input" id="login-password2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" hidden />
+          <button class="btn btn-primary" id="btn-login-submit">로그인</button>
         </div>
-        <div class="login-divider"><span>또는</span></div>
-        <div class="login-stack">
-          <button class="btn btn-social btn-google" id="btn-login-google">
-            <span class="social-badge g">G</span> Google로 시작
-          </button>
-          <button class="btn btn-social btn-kakao" id="btn-login-kakao">
-            <span class="social-badge k">💬</span> 카카오로 시작
-          </button>
+        <div class="login-toggle-row">
+          <span id="login-toggle-text">계정이 없으신가요?</span>
+          <button class="login-toggle-link" id="login-toggle-link">회원가입하기 →</button>
         </div>
-        <p class="login-foot">계정 정보는 이 기기에만 저장됩니다 (mock)</p>
       </div>
 
       <!-- 스텝 2: 프로필 설정 -->
@@ -513,6 +509,6 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>

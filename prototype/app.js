@@ -115,8 +115,38 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 function uid(prefix = 'l') {
-  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+  // 클라우드 호환: 가능하면 UUID 사용
+  return (crypto?.randomUUID && crypto.randomUUID()) ||
+    `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
+
+/* ============ Cloud Sync 헬퍼 (Supabase) ============ */
+function localToCloudFolderId(localId) {
+  if (!localId || localId === 'f-default') return state.defaultFolderCloudId || null;
+  return localId;
+}
+async function cloudSync(fn) {
+  if (!window.QLink?.cloud || !state.user) return;
+  try { await fn(window.QLink.cloud); }
+  catch (err) {
+    console.error('[QLink] sync error', err);
+    toast('동기화 실패: ' + (err.message || err));
+  }
+}
+const cloudCreateFolder = (folder) => cloudSync(c => c.createFolder(folder));
+const cloudUpdateFolder = (id, patch) => cloudSync(c => c.updateFolder(localToCloudFolderId(id), patch));
+const cloudDeleteFolder = (id) => {
+  if (id === 'f-default') return;
+  return cloudSync(c => c.deleteFolder(localToCloudFolderId(id)));
+};
+const cloudCreateLink = (link) => cloudSync(c => c.createLink({ ...link, folderId: localToCloudFolderId(link.folderId) }));
+const cloudUpdateLink = (id, patch) => {
+  const p = { ...patch };
+  if ('folderId' in patch) p.folderId = localToCloudFolderId(patch.folderId);
+  return cloudSync(c => c.updateLink(id, p));
+};
+const cloudDeleteLink = (id) => cloudSync(c => c.deleteLink(id));
+const cloudDeleteLinks = (ids) => cloudSync(c => c.deleteLinks(ids));
 
 function getDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -529,11 +559,15 @@ function deleteFolder(folderId) {
     ? `${headline}\n안의 ${inFolder}개 링크는 '미분류'로 이동합니다.`
     : headline;
   if (!confirm(msg)) return;
+  // 클라우드: 해당 폴더 링크들을 미분류로 옮긴 후 폴더 삭제
+  const movedIds = state.links.filter(l => l.folderId === folderId).map(l => l.id);
   state.links.forEach(l => {
     if (l.folderId === folderId) l.folderId = 'f-default';
   });
   state.folders = state.folders.filter(f => f.id !== folderId);
   saveState();
+  Promise.all(movedIds.map(id => cloudUpdateLink(id, { folderId: 'f-default' })))
+    .then(() => cloudDeleteFolder(folderId));
   renderFolders();
   renderHome();
   toast(folder.shared ? '공유 폴더에서 나갔어요' : '폴더가 삭제되었습니다');
@@ -668,6 +702,7 @@ function saveEditFolder() {
   folder.emoji = editFolderEmoji;
   if (folder.shared) folder.sharedWith = [...editFolderMembers];
   saveState();
+  cloudUpdateFolder(folder.id, { name, emoji: editFolderEmoji });
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   // 폴더 detail 헤더 갱신 (방금 수정한 폴더 화면일 때)
@@ -679,15 +714,17 @@ function saveNewFolder() {
   const name = $('#new-folder-name').value.trim();
   if (!name) { toast('폴더 이름을 입력해주세요'); return; }
   const newId = uid('f');
-  state.folders.push({
+  const folder = {
     id: newId,
     name, emoji: newFolderEmoji,
     color: '#4F46E5',
     shared: newFolderShared,
     createdAt: Date.now(),
     ...(newFolderShared ? { sharedWith: [] } : {}),
-  });
+  };
+  state.folders.push(folder);
   saveState();
+  cloudCreateFolder(folder);
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   renderFolders();
@@ -752,6 +789,7 @@ function toggleTodoDone(linkId) {
   if (!link) return;
   link.todoDone = !link.todoDone;
   saveState();
+  cloudUpdateLink(link.id, { todoDone: link.todoDone });
   toast(link.todoDone ? '✓ 완료로 표시' : '미완료로 변경');
   if ($('#screen-todo').classList.contains('active')) renderTodo();
   if ($('#screen-home').classList.contains('active')) renderHome();
@@ -832,6 +870,7 @@ function openLinkDetail(linkId) {
     if (confirm('이 링크를 삭제할까요?')) {
       state.links = state.links.filter(l => l.id !== link.id);
       saveState();
+      cloudDeleteLink(link.id);
       toast('삭제되었습니다');
       goHome();
     }
@@ -863,6 +902,7 @@ function moveLink(link) {
   if (Number.isNaN(idx) || !state.folders[idx]) return;
   link.folderId = state.folders[idx].id;
   saveState();
+  cloudUpdateLink(link.id, { folderId: link.folderId });
   toast(`${state.folders[idx].name}(으)로 이동`);
   openLinkDetail(link.id);
 }
@@ -994,8 +1034,10 @@ function deleteSelected() {
     return;
   }
   if (!confirm(`${selectedLinkIds.size}개의 링크를 삭제할까요?`)) return;
+  const idsToDelete = Array.from(selectedLinkIds);
   state.links = state.links.filter(l => !selectedLinkIds.has(l.id));
   saveState();
+  cloudDeleteLinks(idsToDelete);
   toast(`${selectedLinkIds.size}개 삭제됨`);
   exitSelectionMode();
 }
@@ -1102,6 +1144,10 @@ function saveTodo() {
   if (todoPendingReminder) link.reminderAt = todoPendingReminder;
   else delete link.reminderAt;
   saveState();
+  cloudUpdateLink(link.id, {
+    todo: link.todo || null,
+    reminderAt: link.reminderAt || null,
+  });
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   toast('할일이 저장되었어요 ✨');
@@ -1115,7 +1161,9 @@ function deleteTodo() {
   if (!link) return;
   delete link.todo;
   delete link.reminderAt;
+  delete link.todoDone;
   saveState();
+  cloudUpdateLink(link.id, { todo: null, reminderAt: null, todoDone: false });
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   toast('할일이 삭제되었어요');
@@ -1145,6 +1193,7 @@ function saveMemo() {
   if (memo) link.memo = memo;
   else delete link.memo;
   saveState();
+  cloudUpdateLink(link.id, { memo: link.memo || null });
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   toast(memo ? '메모가 저장되었어요' : '메모가 삭제되었어요');
@@ -1158,6 +1207,7 @@ function deleteMemo() {
   if (!link) return;
   delete link.memo;
   saveState();
+  cloudUpdateLink(link.id, { memo: null });
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('.sheet-backdrop').classList.remove('open');
   toast('메모가 삭제되었어요');
@@ -1351,6 +1401,7 @@ async function saveLinkFromInput(source = 'url') {
   };
   state.links.unshift(link);
   saveState();
+  cloudCreateLink(link);
   $('#input-url').value = '';
   closeSheets();
   toast('저장 중... AI 요약 생성');
@@ -1371,8 +1422,15 @@ async function saveLinkFromInput(source = 'url') {
     link.oneLiner = r.oneLiner;
     link.tags = r.tags;
     link.title = r.oneLiner;
+    const patch = {
+      summary: r.summary,
+      oneLiner: r.oneLiner,
+      tags: r.tags,
+      title: r.oneLiner,
+    };
     if (link.pendingAutoFolder) {
       link.folderId = autoClassifyFolder(r.tags);
+      patch.folderId = link.folderId;
       delete link.pendingAutoFolder;
       const f = state.folders.find(x => x.id === link.folderId);
       toast(`자동 분류: ${f ? f.emoji + ' ' + f.name : '미분류'} ✨`);
@@ -1380,6 +1438,7 @@ async function saveLinkFromInput(source = 'url') {
       toast('요약이 생성되었어요 ✨');
     }
     saveState();
+    cloudUpdateLink(link.id, patch);
     renderHome();
   }, 1400);
 
@@ -1469,11 +1528,42 @@ async function tryRestoreSession() {
     const data = await window.QLink.auth.getProfile();
     if (!data) return false;
     state.user = profileToUser(data.user, data.profile);
+    await loadCloudData();
     saveState();
     return true;
   } catch (e) {
     console.warn('[QLink] 세션 복원 실패', e);
     return false;
+  }
+}
+
+async function loadCloudData() {
+  if (!window.QLink?.cloud) return;
+  try {
+    const { folders, links } = await window.QLink.cloud.loadAll();
+    // 미분류 폴더 보장
+    let defaultFolder = folders.find(f => !f.shared && f.name === '미분류');
+    if (!defaultFolder) {
+      const id = await window.QLink.cloud.ensureDefaultFolder();
+      defaultFolder = { id, name: '미분류', emoji: '📥', shared: false, sharedWith: [], createdAt: Date.now() };
+      folders.unshift(defaultFolder);
+    }
+    // 미분류의 클라우드 UUID는 state.defaultFolderCloudId 에 별도 저장
+    // 앱 코드는 'f-default' 라는 로컬 sentinel ID 로 다룸
+    state.defaultFolderCloudId = defaultFolder.id;
+    defaultFolder.id = 'f-default';
+    // 링크들 중 default 폴더에 속한 건 'f-default' 로 매핑
+    links.forEach(l => {
+      if (l.folderId === state.defaultFolderCloudId) l.folderId = 'f-default';
+      if (!l.folderId) l.folderId = 'f-default'; // null도 미분류로
+    });
+    state.folders = folders;
+    state.links = links;
+    saveState();
+    console.log('[QLink] cloud data loaded —', folders.length, 'folders,', links.length, 'links');
+  } catch (err) {
+    console.error('[QLink] cloud data load failed', err);
+    toast('클라우드 데이터 불러오기 실패: ' + (err.message || ''));
   }
 }
 
@@ -2087,43 +2177,109 @@ function init() {
     setTimeout(() => toast('탈퇴가 완료되었어요. 안녕히 가세요 👋'), 200);
   };
 
-  // 로그인 화면 — 스텝 1 (Supabase 이메일 인증)
-  $('#btn-login-email').onclick = async () => {
+  // 로그인 모드 토글 (하단 링크)
+  let loginMode = 'signin';
+  const setLoginMode = (mode) => {
+    loginMode = mode;
+    const isSignup = mode === 'signup';
+    $('#login-password').placeholder = isSignup ? '비밀번호 (6자 이상)' : '비밀번호';
+    $('#login-password').autocomplete = isSignup ? 'new-password' : 'current-password';
+    $('#login-password2').hidden = !isSignup;
+    if (!isSignup) $('#login-password2').value = '';
+    $('#btn-login-submit').textContent = isSignup ? '회원가입' : '로그인';
+    $('#login-toggle-text').textContent = isSignup ? '이미 계정이 있으신가요?' : '계정이 없으신가요?';
+    $('#login-toggle-link').textContent = isSignup ? '로그인하기 →' : '회원가입하기 →';
+  };
+  $('#login-toggle-link').onclick = () => {
+    setLoginMode(loginMode === 'signin' ? 'signup' : 'signin');
+  };
+
+  // 이메일 로그인 / 회원가입
+  $('#btn-login-submit').onclick = async () => {
     const email = $('#login-email').value.trim();
     const pw = $('#login-password').value;
     if (!/^.+@.+\..+$/.test(email)) { toast('이메일을 확인해주세요'); return; }
     if (pw.length < 6) { toast('비밀번호는 6자 이상이어야 해요'); return; }
+    if (loginMode === 'signup') {
+      const pw2 = $('#login-password2').value;
+      if (pw !== pw2) { toast('비밀번호가 일치하지 않아요'); return; }
+    }
     if (!SUPABASE_AVAILABLE) {
-      // 폴백: 로컬 mock
       showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
       return;
     }
-    const btn = $('#btn-login-email');
-    btn.disabled = true; btn.textContent = '로그인 중...';
+    const btn = $('#btn-login-submit');
+    const sb = window.QLink.sb;
+    btn.disabled = true; btn.textContent = loginMode === 'signin' ? '로그인 중...' : '가입 중...';
     try {
-      const { isNew } = await window.QLink.auth.signInOrUp(email, pw);
-      if (isNew) {
-        // 신규 가입 → 프로필 설정 단계
+      if (loginMode === 'signup') {
+        const { error } = await sb.auth.signUp({ email, password: pw });
+        if (error) {
+          const msg = error.message || '';
+          if (/already|registered/i.test(msg)) {
+            toast('이미 가입된 이메일이에요 — 로그인 탭으로 전환합니다');
+            setLoginMode('signin');
+          } else {
+            toast('가입 실패: ' + msg);
+          }
+          return;
+        }
+        // 가입 성공 → 프로필 설정 단계
         showLoginStep2({ provider: 'email', email, defaultName: email.split('@')[0], avatar: '🌸' });
       } else {
-        // 기존 사용자 → 프로필 로드 후 홈
+        // 로그인
+        const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (error) {
+          const msg = error.message || '';
+          if (/invalid|credentials/i.test(msg)) {
+            toast('이메일 또는 비밀번호가 맞지 않아요');
+          } else if (/email not confirmed/i.test(msg)) {
+            toast('이메일 인증이 필요해요 (Supabase 대시보드에서 메일 확인)');
+          } else {
+            toast('로그인 실패: ' + msg);
+          }
+          return;
+        }
         await tryRestoreSession();
-        toast(`${state.user.name}님, 다시 만나서 반가워요 ✨`);
-        // 헤더·탭바 복원
         $('.app-header').style.display = '';
         $('.tab-bar').style.display = '';
         $('#fab').style.display = '';
         goHome();
+        toast(`${state.user.name}님, 다시 만나서 반가워요 ✨`);
       }
     } catch (err) {
-      const msg = err.message || '로그인 실패';
-      toast(/already registered/i.test(msg) ? '이미 가입된 이메일이에요. 비밀번호를 확인해주세요.' : msg);
+      toast(err.message || '오류 발생');
     } finally {
-      btn.disabled = false; btn.textContent = '다음';
+      btn.disabled = false;
+      btn.textContent = loginMode === 'signin' ? '로그인' : '회원가입';
     }
   };
-  $('#btn-login-google').onclick = () => toast('Google 로그인은 곧 지원 예정 (OAuth 셋업 필요)');
-  $('#btn-login-kakao').onclick = () => toast('카카오 로그인은 곧 지원 예정 (OAuth 셋업 필요)');
+
+  // 간편 로그인 (Google / Kakao OAuth)
+  async function loginWithOAuth(provider) {
+    if (!SUPABASE_AVAILABLE) { toast('Supabase 미설정'); return; }
+    try {
+      const { error } = await window.QLink.sb.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + window.location.pathname,
+        },
+      });
+      if (error) {
+        if (/provider.*not enabled|not configured/i.test(error.message)) {
+          toast(`${provider === 'google' ? 'Google' : '카카오'} 로그인이 아직 설정 안 됐어요 — Supabase 대시보드에서 활성화 필요`);
+        } else {
+          toast(error.message);
+        }
+      }
+      // 성공 시 외부 도메인으로 리다이렉트되었다가 돌아옴 (자동)
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+  // 간편 로그인은 일단 비활성 — 추후 다시 추가 시 핸들러 복구
+  // $('#btn-login-google')?.addEventListener('click', () => loginWithOAuth('google'));
+  // $('#btn-login-kakao')?.addEventListener('click', () => loginWithOAuth('kakao'));
   // 로그인 화면 — 스텝 2
   $('#btn-login-finish').onclick = finishLogin;
   $('#btn-login-back').onclick = () => {

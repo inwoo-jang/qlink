@@ -12,9 +12,12 @@
 
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
     auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
+      autoRefreshToken: true,        // access token 자동 갱신
+      persistSession: true,          // 브라우저 재시작·새로고침 후에도 세션 유지
+      detectSessionInUrl: true,      // OAuth 콜백 처리
+      storage: window.localStorage,  // 명시 (기본값과 동일, 브라우저 종료에도 살아있음)
+      storageKey: 'qlink-auth',
+      flowType: 'pkce',              // PKCE 흐름 (보안 강화)
     },
   });
 
