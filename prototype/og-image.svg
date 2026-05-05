@@ -30,13 +30,11 @@
     <text x="120" y="510" font-size="14" fill="#C589E8">✦</text>
   </g>
 
-  <g transform="translate(0, -10)">
-    <image x="220" y="195" width="240" height="240" xlink:href="icon-search.png" preserveAspectRatio="xMidYMid meet"/>
-    <text x="495" y="370"
-          font-family="Outfit, system-ui, -apple-system, sans-serif"
-          font-size="160"
-          font-weight="900"
-          letter-spacing="6"
-          fill="url(#brand)">QLINK</text>
-  </g>
+  <image x="110" y="195" width="240" height="240" xlink:href="icon-search.png" preserveAspectRatio="xMidYMid meet"/>
+  <text x="367" y="386"
+        font-family="Outfit, system-ui, -apple-system, sans-serif"
+        font-size="200"
+        font-weight="900"
+        letter-spacing="6"
+        fill="url(#brand)">QLINK</text>
 </svg>
