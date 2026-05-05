@@ -18,6 +18,7 @@
   --shadow-md: 0 4px 16px rgba(var(--qlink-glow-rgb), .15);
   --shadow-lg: 0 12px 32px rgba(var(--qlink-glow-rgb), .25);
   --shadow-glow: 0 0 20px rgba(var(--qlink-glow-rgb), .35);
+  --qlink-icon-tint: brightness(1);  /* 라이트 + 핑크 = 원본 그대로 */
   --r-sm: 10px;
   --r-md: 14px;
   --r-lg: 20px;
@@ -52,6 +53,7 @@
   --qlink-text-muted: #6B7E9B;
   --grad-primary: linear-gradient(135deg, #4F8FFF 0%, #93B5FC 50%, #C589E8 100%);
   --grad-soft: linear-gradient(135deg, #E5F0FF 0%, #EEF0FF 100%);
+  --qlink-icon-tint: hue-rotate(-55deg) saturate(0.95);
 }
 
 /* ───── 라이트 + 그레이 ───── */
@@ -67,6 +69,7 @@
   --qlink-text-muted: #6B7280;
   --grad-primary: linear-gradient(135deg, #6B7280 0%, #9CA3AF 50%, #D1D5DB 100%);
   --grad-soft: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+  --qlink-icon-tint: grayscale(0.92) brightness(1.05);
 }
 
 /* ───── 다크 + 핑크 ───── */
@@ -88,6 +91,7 @@
   --shadow-md: 0 4px 16px rgba(var(--qlink-glow-rgb), .25);
   --shadow-lg: 0 12px 32px rgba(var(--qlink-glow-rgb), .4);
   --shadow-glow: 0 0 24px rgba(var(--qlink-glow-rgb), .55);
+  --qlink-icon-tint: brightness(1.1);
 }
 
 /* ───── 다크 + 블루 ───── */
@@ -104,6 +108,7 @@
   --qlink-text-muted: #A0B5D8;
   --grad-primary: linear-gradient(135deg, #8FB3FF 0%, #B5C8FF 50%, #FFE066 100%);
   --grad-soft: linear-gradient(135deg, #1A2235 0%, #243049 100%);
+  --qlink-icon-tint: hue-rotate(-55deg) saturate(0.95) brightness(1.12);
 }
 
 /* ───── 다크 + 그레이 ───── */
@@ -120,6 +125,7 @@
   --qlink-text-muted: #94A3B8;
   --grad-primary: linear-gradient(135deg, #C0C8D5 0%, #94A3B8 50%, #6B7280 100%);
   --grad-soft: linear-gradient(135deg, #1F232E 0%, #2A2F3A 100%);
+  --qlink-icon-tint: grayscale(0.92) brightness(1.2);
 }
 
 /* 다크 모드 공통: 강한 그림자/글로우 */
@@ -307,18 +313,19 @@ a { color: inherit; text-decoration: none; }
   width: 28px; height: 28px;
   object-fit: contain;
   opacity: 0.75;
+  filter: var(--qlink-icon-tint);
   transition: opacity .15s, filter .15s;
 }
 [data-theme="dark"] .icon-btn img {
   opacity: 0.85;
-  filter: brightness(1.1);
+  /* filter는 --qlink-icon-tint 변수가 처리 */
 }
 .icon-btn:hover {
   background: color-mix(in srgb, var(--qlink-primary) 14%, transparent);
 }
 .icon-btn:hover img {
   opacity: 1;
-  filter: drop-shadow(0 2px 4px rgba(var(--qlink-glow-rgb), .35));
+  filter: var(--qlink-icon-tint) drop-shadow(0 2px 4px rgba(var(--qlink-glow-rgb), .35));
 }
 .icon-btn:active { transform: scale(.92); }
 [data-theme="dark"] .icon-btn:hover {
@@ -326,7 +333,7 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 0 12px rgba(var(--qlink-glow-rgb), .35);
 }
 [data-theme="dark"] .icon-btn:hover img {
-  filter: drop-shadow(0 0 6px rgba(var(--qlink-glow-rgb), .6)) brightness(1.2);
+  filter: var(--qlink-icon-tint) drop-shadow(0 0 6px rgba(var(--qlink-glow-rgb), .6));
 }
 
 /* ============ 화면 컨테이너 ============ */
@@ -622,6 +629,7 @@ a { color: inherit; text-decoration: none; }
   width: 36px; height: 36px;
   object-fit: contain;
   opacity: 0.65;
+  filter: var(--qlink-icon-tint);
   transition: opacity .2s, transform .2s, filter .2s;
 }
 .tab-item[data-tab="todo"] .tab-icon-wrap img {
@@ -644,7 +652,7 @@ a { color: inherit; text-decoration: none; }
 }
 [data-theme="dark"] .tab-icon-wrap img {
   opacity: 0.7;
-  filter: brightness(1.1);
+  /* filter는 --qlink-icon-tint 변수가 처리 */
 }
 .tab-item.active { color: var(--qlink-primary); }
 .tab-item.active .tab-icon-wrap {
@@ -654,14 +662,14 @@ a { color: inherit; text-decoration: none; }
 .tab-item.active .tab-icon-wrap img {
   opacity: 1;
   transform: scale(1.08);
-  filter: drop-shadow(0 2px 4px rgba(var(--qlink-glow-rgb), .5));
+  filter: var(--qlink-icon-tint) drop-shadow(0 2px 4px rgba(var(--qlink-glow-rgb), .5));
 }
 [data-theme="dark"] .tab-item.active .tab-icon-wrap {
   background: color-mix(in srgb, var(--qlink-primary) 22%, transparent);
   box-shadow: 0 0 18px rgba(var(--qlink-glow-rgb), .65), inset 0 0 0 1px var(--qlink-border);
 }
 [data-theme="dark"] .tab-item.active .tab-icon-wrap img {
-  filter: drop-shadow(0 0 6px rgba(var(--qlink-glow-rgb), .8)) brightness(1.15);
+  filter: var(--qlink-icon-tint) drop-shadow(0 0 6px rgba(var(--qlink-glow-rgb), .8));
   opacity: 1;
 }
 
