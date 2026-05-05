@@ -1673,6 +1673,24 @@ function avatarHtml(content) {
   return content;
 }
 
+// 모듈 스코프 — showLogin에서도 접근 가능
+let loginMode = 'signin';
+function setLoginMode(mode) {
+  loginMode = mode;
+  const isSignup = mode === 'signup';
+  const pw = $('#login-password');
+  if (pw) {
+    pw.placeholder = isSignup ? '비밀번호 (6자 이상)' : '비밀번호';
+    pw.autocomplete = isSignup ? 'new-password' : 'current-password';
+  }
+  const pw2 = $('#login-password2-wrap');
+  if (pw2) pw2.hidden = !isSignup;
+  if (!isSignup) { const pw2i = $('#login-password2'); if (pw2i) pw2i.value = ''; }
+  const sub = $('#btn-login-submit'); if (sub) sub.textContent = isSignup ? '회원가입' : '로그인';
+  const tt = $('#login-toggle-text'); if (tt) tt.textContent = isSignup ? '이미 계정이 있으신가요?' : '계정이 없으신가요?';
+  const tl = $('#login-toggle-link'); if (tl) tl.textContent = isSignup ? '로그인하기 →' : '회원가입하기 →';
+}
+
 function showLogin() {
   $$('.screen').forEach(s => s.classList.remove('active'));
   $('#screen-login').classList.add('active');
@@ -1683,9 +1701,12 @@ function showLogin() {
   // 입력 초기화 + 스텝 1로
   $('#login-email').value = '';
   $('#login-password').value = '';
+  $('#login-password2').value = '';
   $('#login-nickname').value = '';
   $('#login-step-1').hidden = false;
   $('#login-step-2').hidden = true;
+  // 로그인/회원가입 모드 리셋 (지난 상태 흔적 제거)
+  setLoginMode('signin');
   pendingLogin = null;
 }
 
@@ -2387,18 +2408,6 @@ function init() {
   });
 
   // 로그인 모드 토글 (하단 링크)
-  let loginMode = 'signin';
-  const setLoginMode = (mode) => {
-    loginMode = mode;
-    const isSignup = mode === 'signup';
-    $('#login-password').placeholder = isSignup ? '비밀번호 (6자 이상)' : '비밀번호';
-    $('#login-password').autocomplete = isSignup ? 'new-password' : 'current-password';
-    $('#login-password2-wrap').hidden = !isSignup;
-    if (!isSignup) $('#login-password2').value = '';
-    $('#btn-login-submit').textContent = isSignup ? '회원가입' : '로그인';
-    $('#login-toggle-text').textContent = isSignup ? '이미 계정이 있으신가요?' : '계정이 없으신가요?';
-    $('#login-toggle-link').textContent = isSignup ? '로그인하기 →' : '회원가입하기 →';
-  };
   $('#login-toggle-link').onclick = () => {
     setLoginMode(loginMode === 'signin' ? 'signup' : 'signin');
   };
