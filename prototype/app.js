@@ -1748,21 +1748,109 @@ async function logout() {
 
 function userProviderLabel(p, email) {
   const map = {
-    email: '이메일',
+    email: '이메일 계정',
     google: 'Google 계정',
     kakao: '카카오톡 계정',
   };
-  const label = map[p] || p;
+  const label = map[p] || (p ? p : '계정');
   return email ? `${label} · ${email}` : label;
 }
 
 function openAccountSheet() {
   if (!state.user) return;
   $('#account-row-nickname-value').textContent = state.user.name;
-  $('#account-row-provider-value').textContent = userProviderLabel(state.user.provider, state.user.email);
+  $('#account-row-email-value').textContent = state.user.email || '—';
+  $('#account-row-provider-value').textContent = userProviderLabel(state.user.provider);
   $$('.sheet').forEach(s => s.classList.remove('open'));
   $('#account-sheet').classList.add('open');
   $('.sheet-backdrop').classList.add('open');
+}
+
+function openEmailChangeSheet() {
+  if (!state.user) return;
+  $('#current-email-display').value = state.user.email;
+  $('#new-email-input').value = '';
+  $$('.sheet').forEach(s => s.classList.remove('open'));
+  $('#email-change-sheet').classList.add('open');
+  $('.sheet-backdrop').classList.add('open');
+}
+
+async function changeEmail() {
+  const newEmail = $('#new-email-input').value.trim();
+  if (!/^.+@.+\..+$/.test(newEmail)) { toast('이메일을 확인해주세요'); return; }
+  if (newEmail === state.user.email) { toast('현재 이메일과 동일해요'); return; }
+  if (!window.QLink?.sb) { toast('Supabase 미설정'); return; }
+  const btn = $('#btn-email-change-save');
+  btn.disabled = true; btn.textContent = '발송 중...';
+  try {
+    const { error } = await window.QLink.sb.auth.updateUser({ email: newEmail });
+    if (error) {
+      toast(/rate|too many/i.test(error.message) ? '잠시 후 다시 시도해주세요' : '변경 실패: ' + error.message);
+      return;
+    }
+    toast(`📨 ${newEmail} 으로 확인 메일 발송`);
+    $$('.sheet').forEach(s => s.classList.remove('open'));
+    $('.sheet-backdrop').classList.remove('open');
+  } finally {
+    btn.disabled = false; btn.textContent = '변경 메일 보내기';
+  }
+}
+
+function openPasswordChangeSheet() {
+  $('#new-password-input').value = '';
+  $('#new-password-confirm').value = '';
+  $$('.sheet').forEach(s => s.classList.remove('open'));
+  $('#password-change-sheet').classList.add('open');
+  $('.sheet-backdrop').classList.add('open');
+}
+
+async function changePassword() {
+  const pw1 = $('#new-password-input').value;
+  const pw2 = $('#new-password-confirm').value;
+  if (pw1.length < 6) { toast('비밀번호는 6자 이상이어야 해요'); return; }
+  if (pw1 !== pw2) { toast('비밀번호가 일치하지 않아요'); return; }
+  if (!window.QLink?.sb) { toast('Supabase 미설정'); return; }
+  const btn = $('#btn-password-change-save');
+  btn.disabled = true; btn.textContent = '변경 중...';
+  try {
+    const { error } = await window.QLink.sb.auth.updateUser({ password: pw1 });
+    if (error) {
+      toast('변경 실패: ' + error.message);
+      return;
+    }
+    toast('🔐 비밀번호가 변경되었어요');
+    $$('.sheet').forEach(s => s.classList.remove('open'));
+    $('.sheet-backdrop').classList.remove('open');
+  } finally {
+    btn.disabled = false; btn.textContent = '비밀번호 변경';
+  }
+}
+
+async function deleteAccount() {
+  if (!state.user || !window.QLink?.sb) return;
+  // profile 삭제 → cascade 로 folders, links, folder_members 모두 정리됨
+  try {
+    const { error } = await window.QLink.sb.from('profiles').delete().eq('id', state.user.id);
+    if (error) {
+      toast('탈퇴 실패: ' + error.message);
+      console.error('delete profile failed', error);
+      return;
+    }
+  } catch (err) {
+    toast('탈퇴 실패: ' + err.message);
+    return;
+  }
+  // 로그아웃
+  try { await window.QLink.sb.auth.signOut(); } catch {}
+  // 로컬 상태 클린업
+  localStorage.removeItem(STORAGE_KEY);
+  state = loadState();
+  state.user = null;
+  saveState();
+  $$('.sheet').forEach(s => s.classList.remove('open'));
+  $('.sheet-backdrop').classList.remove('open');
+  showLogin();
+  setTimeout(() => toast('탈퇴가 완료되었어요. 안녕히 가세요 👋'), 200);
 }
 
 function setHeader(mode, title, backHandler, rightAction) {
@@ -2084,7 +2172,7 @@ function init() {
     toast('Mock QR 인식: github.com/anthropics/claude-code');
   };
 
-  // 홈 검색 디바운스
+  // 홈 검색 디바운스 + Enter 즉시 검색
   let searchTimer;
   $('#home-search-input').addEventListener('input', e => {
     clearTimeout(searchTimer);
@@ -2093,6 +2181,15 @@ function init() {
       homeSearchQuery = v.trim();
       renderHome();
     }, 250);
+  });
+  $('#home-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      homeSearchQuery = e.target.value.trim();
+      renderHome();
+      e.target.blur();
+    }
   });
 
   // 할일 필터 칩
@@ -2150,40 +2247,33 @@ function init() {
   $('#sel-all').onclick = selectAllVisible;
   $('#sel-share').onclick = shareSelected;
   $('#sel-delete').onclick = deleteSelected;
-  $('#account-row-nickname').onclick = () => {
-    // 계정 시트 닫고 프로필 편집 시트 열기
+  $('#account-row-nickname')?.addEventListener('click', () => {
     $('#account-sheet').classList.remove('open');
     openEditProfile();
-  };
-  $('#account-row-reset').onclick = () => {
-    if (!confirm('모든 데이터를 초기화할까요?\n\n링크·폴더·설정이 모두 삭제됩니다.\n계정은 유지됩니다.')) return;
-    if (!confirm('정말로 초기화할까요? 되돌릴 수 없어요.')) return;
-    const user = state.user;
-    localStorage.removeItem(STORAGE_KEY);
-    state = loadState();
-    state.user = user; // 계정만 유지
-    saveState();
+  });
+  $('#account-row-email')?.addEventListener('click', openEmailChangeSheet);
+  $('#account-row-password')?.addEventListener('click', openPasswordChangeSheet);
+  $('#account-row-logout')?.addEventListener('click', () => {
+    $('#account-sheet').classList.remove('open');
+    $('.sheet-backdrop').classList.remove('open');
+    logout();
+  });
+  $('#account-row-leave')?.addEventListener('click', async () => {
+    if (!confirm('정말 탈퇴하시겠어요?\n\n저장한 모든 링크·폴더가 삭제되고 계정은 비활성화됩니다.')) return;
+    const ok = prompt('확인을 위해 "탈퇴" 라고 입력해주세요');
+    if (ok?.trim() !== '탈퇴') { toast('탈퇴가 취소되었습니다'); return; }
+    await deleteAccount();
+  });
+  $('#btn-email-change-save')?.addEventListener('click', changeEmail);
+  $('#btn-email-change-cancel')?.addEventListener('click', () => {
     $$('.sheet').forEach(s => s.classList.remove('open'));
     $('.sheet-backdrop').classList.remove('open');
-    renderHome(); renderFolders(); renderSettings();
-    toast('데이터가 초기화되었어요');
-  };
-  $('#account-row-leave').onclick = () => {
-    if (!confirm('정말 탈퇴하시겠어요?\n\n계정과 모든 데이터가 영구 삭제됩니다.')) return;
-    const confirmText = prompt('확인을 위해 "탈퇴" 라고 입력해주세요');
-    if (confirmText?.trim() !== '탈퇴') {
-      toast('탈퇴가 취소되었습니다');
-      return;
-    }
-    localStorage.removeItem(STORAGE_KEY);
-    state = loadState();
-    state.user = null;
-    saveState();
+  });
+  $('#btn-password-change-save')?.addEventListener('click', changePassword);
+  $('#btn-password-change-cancel')?.addEventListener('click', () => {
     $$('.sheet').forEach(s => s.classList.remove('open'));
     $('.sheet-backdrop').classList.remove('open');
-    showLogin();
-    setTimeout(() => toast('탈퇴가 완료되었어요. 안녕히 가세요 👋'), 200);
-  };
+  });
 
   // 로그인 모드 토글 (하단 링크)
   let loginMode = 'signin';
@@ -2201,6 +2291,16 @@ function init() {
   $('#login-toggle-link').onclick = () => {
     setLoginMode(loginMode === 'signin' ? 'signup' : 'signin');
   };
+
+  // Enter 키로 로그인/회원가입 제출
+  ['login-email', 'login-password', 'login-password2'].forEach(id => {
+    $('#' + id)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $('#btn-login-submit').click();
+      }
+    });
+  });
 
   // 이메일 로그인 / 회원가입
   $('#btn-login-submit').onclick = async () => {
