@@ -11,11 +11,8 @@ const DEFAULT_STATE = {
   user: null,  // { name, email, avatar, provider, joinedAt }
   links: [],
   folders: [
-    { id: 'f-default', name: '미분류', emoji: '📥', color: '#94A3B8', shared: false, createdAt: 0 },
-    { id: 'f-tech', name: '기술', emoji: '💻', color: '#4F46E5', shared: false, createdAt: Date.now() - 86400000 * 10 },
-    { id: 'f-music', name: '음악/영상', emoji: '🎵', color: '#F59E0B', shared: false, createdAt: Date.now() - 86400000 * 7 },
-    { id: 'f-team', name: '스터디 자료', emoji: '📚', color: '#10B981', shared: true, sharedWith: ['민지', '서연'], createdAt: Date.now() - 86400000 * 5 },
-    { id: 'f-cafe', name: '카페 투어', emoji: '☕', color: '#FFB6B9', shared: true, sharedWith: ['지수', '하늘', '예준'], createdAt: Date.now() - 86400000 * 2 },
+    // 신규 유저는 미분류 폴더 하나만으로 시작 (다른 폴더는 직접 생성)
+    { id: 'f-default', name: '미분류', emoji: '📥', shared: false, createdAt: 0 },
   ],
   settings: {
     aiProvider: 'gemini-web',
@@ -27,44 +24,8 @@ const DEFAULT_STATE = {
   },
 };
 
-const SEED_LINKS = [
-  {
-    id: 'l-1',
-    url: 'https://react.dev/learn',
-    domain: 'react.dev',
-    title: 'Quick Start – React',
-    summary: '리액트 기본 개념(컴포넌트·JSX·상태) 을 빠르게 익힐 수 있는 공식 튜토리얼.',
-    oneLiner: '리액트 공식 빠른 시작 가이드',
-    tags: ['react', 'frontend', 'tutorial'],
-    folderId: 'f-tech',
-    sourceType: 'url',
-    createdAt: Date.now() - 86400000 * 2,
-  },
-  {
-    id: 'l-2',
-    url: 'https://github.com/anthropics/anthropic-sdk-typescript',
-    domain: 'github.com',
-    title: 'anthropics/anthropic-sdk-typescript',
-    summary: 'Anthropic Claude API 공식 TypeScript SDK. 메시지·스트리밍·툴 사용을 지원.',
-    oneLiner: 'Anthropic Claude TS SDK',
-    tags: ['github', 'typescript', 'ai-sdk'],
-    folderId: 'f-tech',
-    sourceType: 'url',
-    createdAt: Date.now() - 86400000,
-  },
-  {
-    id: 'l-3',
-    url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    domain: 'youtube.com',
-    title: '오디오 인터페이스 입문 가이드',
-    summary: '홈 레코딩을 시작하는 사람을 위한 오디오 인터페이스 추천 5종 비교.',
-    oneLiner: '오디오 인터페이스 추천 영상',
-    tags: ['music', 'gear', 'youtube'],
-    folderId: 'f-music',
-    sourceType: 'qr',
-    createdAt: Date.now() - 3600000,
-  },
-];
+// 신규 유저는 0에서 시작 — 시드 링크 없음
+const SEED_LINKS = [];
 
 /* ============ State ============ */
 let state = loadState();
@@ -91,14 +52,6 @@ function loadState() {
     parsed.settings = parsed.settings || {};
     if (!parsed.settings.folderSort) parsed.settings.folderSort = 'recent';
     if (!parsed.settings.linkSort) parsed.settings.linkSort = 'recent';
-    // 시드 공유 폴더가 없으면 추가
-    const hasShared = parsed.folders.some(f => f.shared);
-    if (!hasShared) {
-      parsed.folders.push(
-        { id: 'f-team', name: '스터디 자료', emoji: '📚', color: '#10B981', shared: true, sharedWith: ['민지', '서연'], createdAt: Date.now() - 86400000 * 5 },
-        { id: 'f-cafe', name: '카페 투어', emoji: '☕', color: '#FFB6B9', shared: true, sharedWith: ['지수', '하늘', '예준'], createdAt: Date.now() - 86400000 * 2 },
-      );
-    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     return parsed;
   } catch (e) {
@@ -246,6 +199,24 @@ function mockSummarize(url) {
 let homeSearchQuery = '';
 
 function renderHome(filter = 'recent', folderId = null) {
+  // 동적 필터 칩 렌더 (사용자가 만든 폴더 기준)
+  const filterBar = $('#home-filters');
+  const prevActive = filterBar.querySelector('.filter-chip.active')?.dataset.folder ?? '';
+  const myFolders = state.folders.filter(f => !f.shared && f.id !== 'f-default');
+  const defaultFolder = state.folders.find(f => f.id === 'f-default');
+  filterBar.innerHTML = `
+    <button class="filter-chip${prevActive === '' ? ' active' : ''}" data-folder="">전체</button>
+    ${myFolders.map(f => `<button class="filter-chip${prevActive === f.id ? ' active' : ''}" data-folder="${f.id}">${f.emoji} ${escapeHtml(f.name)}</button>`).join('')}
+    ${defaultFolder ? `<button class="filter-chip${prevActive === 'f-default' ? ' active' : ''}" data-folder="f-default">${defaultFolder.emoji} ${defaultFolder.name}</button>` : ''}
+  `;
+  $$('#home-filters .filter-chip').forEach(chip => {
+    chip.onclick = () => {
+      $$('#home-filters .filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderHome();
+    };
+  });
+
   // 정렬 바 렌더 + 바인딩
   const sortContainer = $('#home-sort-bar');
   if (sortContainer) {
@@ -2136,15 +2107,7 @@ function init() {
   // 뒤로 가기 버튼
   $$('.btn-back').forEach(b => b.onclick = () => goHome());
 
-  // 필터 chips (홈)
-  $$('#home-filters .filter-chip').forEach(chip => {
-    chip.onclick = () => {
-      $$('#home-filters .filter-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const fid = chip.dataset.folder || null;
-      renderHome('recent', fid);
-    };
-  });
+  // 필터 chips는 renderHome 내부에서 동적으로 렌더 + 바인딩됨
 
   // 설정
   $('#row-provider').onclick = () => openProviderSheet();
@@ -2359,9 +2322,10 @@ function init() {
     // 입력값 그대로 두고 회원가입 모드 유지
   };
 
-  // 간편 로그인은 일단 비활성 — 추후 다시 추가 시 핸들러 복구
-  // $('#btn-login-google')?.addEventListener('click', () => loginWithOAuth('google'));
-  // $('#btn-login-kakao')?.addEventListener('click', () => loginWithOAuth('kakao'));
+  // 간편 로그인 — 현재 비활성, 클릭 시 안내
+  const oauthSoonMsg = '해당 기능은 준비중입니다. 이메일로 회원가입/로그인해주시기 바랍니다';
+  $('#btn-login-google')?.addEventListener('click', () => toast(oauthSoonMsg));
+  $('#btn-login-kakao')?.addEventListener('click', () => toast(oauthSoonMsg));
   // 로그인 화면 — 스텝 2
   $('#btn-login-finish').onclick = finishLogin;
   $('#btn-login-back').onclick = () => {

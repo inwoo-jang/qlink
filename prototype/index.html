@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#4F46E5" />
   <title>큐링크 (QLink) — 프로토타입</title>
-  <link rel="stylesheet" href="styles.css?v=37" />
+  <link rel="stylesheet" href="styles.css?v=38" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -21,9 +21,9 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
   <!-- Supabase JS SDK + 설정 + 클라이언트 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=37"></script>
-  <script src="supabase-client.js?v=37"></script>
-  <script src="supabase-data.js?v=37"></script>
+  <script src="supabase-config.js?v=38"></script>
+  <script src="supabase-client.js?v=38"></script>
+  <script src="supabase-data.js?v=38"></script>
 </head>
 <body>
   <div class="device-frame">
@@ -59,6 +59,15 @@
           <input class="input" id="login-password2" type="password" placeholder="비밀번호 확인" autocomplete="new-password" hidden />
           <button class="btn btn-primary" id="btn-login-submit">로그인</button>
         </div>
+        <div class="login-divider"><span>또는</span></div>
+        <div class="login-stack">
+          <button class="btn btn-social btn-google" id="btn-login-google">
+            <span class="social-badge g">G</span> Google로 계속하기
+          </button>
+          <button class="btn btn-social btn-kakao" id="btn-login-kakao">
+            <span class="social-badge k">💬</span> 카카오로 계속하기
+          </button>
+        </div>
         <div class="login-toggle-row">
           <span id="login-toggle-text">계정이 없으신가요?</span>
           <button class="login-toggle-link" id="login-toggle-link">회원가입하기 →</button>
@@ -92,12 +101,7 @@
       <div class="search-box home-search-box">
         <input class="input" id="home-search-input" placeholder="제목·요약·태그 검색" autocomplete="off" />
       </div>
-      <div class="filter-bar" id="home-filters">
-        <button class="filter-chip active" data-folder="">전체</button>
-        <button class="filter-chip" data-folder="f-tech">💻 기술</button>
-        <button class="filter-chip" data-folder="f-music">🎵 음악/영상</button>
-        <button class="filter-chip" data-folder="f-default">📥 미분류</button>
-      </div>
+      <div class="filter-bar" id="home-filters"></div>
       <div id="home-sort-bar"></div>
       <div id="home-list"></div>
     </main>
@@ -533,6 +537,6 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>
