@@ -2299,7 +2299,7 @@ function init() {
     const isSignup = mode === 'signup';
     $('#login-password').placeholder = isSignup ? '비밀번호 (6자 이상)' : '비밀번호';
     $('#login-password').autocomplete = isSignup ? 'new-password' : 'current-password';
-    $('#login-password2').hidden = !isSignup;
+    $('#login-password2-wrap').hidden = !isSignup;
     if (!isSignup) $('#login-password2').value = '';
     $('#btn-login-submit').textContent = isSignup ? '회원가입' : '로그인';
     $('#login-toggle-text').textContent = isSignup ? '이미 계정이 있으신가요?' : '계정이 없으신가요?';
@@ -2455,6 +2455,18 @@ function init() {
   );
   $('#login-nickname').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); finishLogin(); }
+  });
+
+  // 비밀번호 input 눈 토글
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.input-eye');
+    if (!btn) return;
+    const id = btn.dataset.toggle;
+    const input = document.getElementById(id);
+    if (!input) return;
+    const willShow = input.type === 'password';
+    input.type = willShow ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', willShow ? 'true' : 'false');
   });
 
   bindSheetDragToDismiss();
