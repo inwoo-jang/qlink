@@ -2377,7 +2377,11 @@ function init() {
           }
           return;
         }
-        await tryRestoreSession();
+        const ok = await tryRestoreSession();
+        if (!ok || !state.user) {
+          toast('프로필 로드에 실패했어요. 잠시 후 다시 시도해주세요.');
+          return;
+        }
         $('.app-header').style.display = '';
         $('.tab-bar').style.display = '';
         $('#fab').style.display = '';

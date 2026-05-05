@@ -53,13 +53,26 @@
     async getProfile() {
       const u = await this.getCurrentUser();
       if (!u) return null;
-      const { data, error } = await sb.from('profiles').select('*').eq('id', u.id).single();
+      // 1차 조회
+      let { data, error } = await sb.from('profiles').select('*').eq('id', u.id).maybeSingle();
       if (error) {
         // 트리거가 늦게 동작했을 가능성 → 1초 대기 후 1회 재시도
         await new Promise(r => setTimeout(r, 1000));
-        const retry = await sb.from('profiles').select('*').eq('id', u.id).single();
+        const retry = await sb.from('profiles').select('*').eq('id', u.id).maybeSingle();
         if (retry.error) throw retry.error;
-        return { user: u, profile: retry.data };
+        data = retry.data;
+      }
+      // 프로필 누락 시 즉석 생성 (트리거 못 따라간 케이스 대응)
+      if (!data) {
+        console.warn('[QLink] profile row 누락 — 자동 생성 시도');
+        const ins = await sb.from('profiles').insert({
+          id: u.id,
+          display_name: u.email?.split('@')[0] || '사용자',
+          avatar: '🌸',
+          provider: 'email',
+        }).select().single();
+        if (ins.error) throw ins.error;
+        data = ins.data;
       }
       return { user: u, profile: data };
     },
