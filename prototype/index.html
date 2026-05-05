@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4F46E5" />
+  <title>큐링크 (QLink) — 프로토타입</title>
+  <link rel="stylesheet" href="styles.css?v=28" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="QLINK" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="preconnect" href="https://www.google.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&display=swap" rel="stylesheet">
+  <!-- QR 스캐너 (CDN) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div class="device-frame">
+    <!-- =============== 상단 바 =============== -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo" id="header-logo">QLINK</div>
+        <button class="icon-btn header-back" id="header-back" aria-label="뒤로" hidden>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+      <div class="header-center">
+        <span class="header-title" id="header-title"></span>
+      </div>
+      <div class="header-right" id="header-actions">
+        <div class="header-default-actions" id="header-default-actions">
+          <button class="icon-btn" id="btn-search-top" aria-label="검색"><img src="icon-search.png" alt="" /></button>
+          <button class="icon-btn" id="btn-settings-top" aria-label="설정"><img src="icon-settings.png" alt="" /></button>
+        </div>
+        <button class="icon-btn header-action-btn" id="btn-header-action" hidden aria-label="컨텍스트 액션"></button>
+      </div>
+    </header>
+
+    <!-- =============== 화면: 로그인 =============== -->
+    <main class="screen screen-login" id="screen-login">
+      <!-- 스텝 1: 방법 선택 -->
+      <div class="login-content" id="login-step-1">
+        <div class="login-logo">QLINK</div>
+        <p class="login-tagline">링크와 QR을 AI가 정리해주는<br/>핑크빛 북마크 ✨</p>
+        <div class="login-stack">
+          <input class="input" id="login-email" type="email" placeholder="이메일" autocomplete="email" />
+          <input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
+          <button class="btn btn-primary" id="btn-login-email">다음</button>
+        </div>
+        <div class="login-divider"><span>또는</span></div>
+        <div class="login-stack">
+          <button class="btn btn-social btn-google" id="btn-login-google">
+            <span class="social-badge g">G</span> Google로 시작
+          </button>
+          <button class="btn btn-social btn-kakao" id="btn-login-kakao">
+            <span class="social-badge k">💬</span> 카카오로 시작
+          </button>
+        </div>
+        <p class="login-foot">계정 정보는 이 기기에만 저장됩니다 (mock)</p>
+      </div>
+
+      <!-- 스텝 2: 프로필 설정 -->
+      <div class="login-content" id="login-step-2" hidden>
+        <div class="login-logo" style="font-size:36px">QLINK</div>
+        <p class="login-tagline">프로필을 설정해주세요 ✨</p>
+        <div class="avatar-preview-wrap">
+          <div class="avatar-preview-circle" id="login-avatar-preview"></div>
+          <label class="upload-avatar-btn" title="사진 업로드">
+            📷
+            <input type="file" id="login-avatar-upload" accept="image/*" hidden />
+          </label>
+        </div>
+        <div class="picker-label">프로필 사진</div>
+        <div class="emoji-grid avatar-grid" id="login-avatar-grid"></div>
+        <div class="picker-label">닉네임</div>
+        <input class="input" id="login-nickname" placeholder="닉네임" maxlength="12" />
+        <div class="login-stack" style="margin-top:8px">
+          <button class="btn btn-primary" id="btn-login-finish">시작하기</button>
+          <button class="btn btn-ghost" id="btn-login-back">← 다른 방법으로</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- =============== 화면: 홈 =============== -->
+    <main class="screen active" id="screen-home">
+      <div class="search-box home-search-box">
+        <input class="input" id="home-search-input" placeholder="제목·요약·태그 검색" autocomplete="off" />
+      </div>
+      <div class="filter-bar" id="home-filters">
+        <button class="filter-chip active" data-folder="">전체</button>
+        <button class="filter-chip" data-folder="f-tech">💻 기술</button>
+        <button class="filter-chip" data-folder="f-music">🎵 음악/영상</button>
+        <button class="filter-chip" data-folder="f-default">📥 미분류</button>
+      </div>
+      <div id="home-sort-bar"></div>
+      <div id="home-list"></div>
+    </main>
+
+    <!-- =============== 화면: 폴더 =============== -->
+    <main class="screen" id="screen-folders">
+      <div id="folders-content"></div>
+    </main>
+
+    <!-- =============== 화면: 폴더 상세 =============== -->
+    <main class="screen" id="screen-folder-detail">
+      <div id="folder-detail-sort-bar"></div>
+      <div id="folder-detail-list"></div>
+    </main>
+
+    <!-- =============== 화면: 할일 (메모·리마인더) =============== -->
+    <main class="screen" id="screen-todo">
+      <div class="filter-bar" id="todo-filters">
+        <button class="filter-chip active" data-todo-filter="all">전체</button>
+        <button class="filter-chip" data-todo-filter="undone">미완료</button>
+        <button class="filter-chip" data-todo-filter="upcoming">⏰ 알림예정</button>
+        <button class="filter-chip" data-todo-filter="overdue">🔥 기간지남</button>
+        <button class="filter-chip" data-todo-filter="done">✓ 완료</button>
+      </div>
+      <div id="todo-list"></div>
+    </main>
+
+    <!-- =============== 화면: 링크 상세 =============== -->
+    <main class="screen" id="screen-link-detail">
+      <div id="link-detail-content"></div>
+    </main>
+
+    <!-- =============== 화면: QR 스캐너 =============== -->
+    <main class="screen" id="screen-qr">
+      <div id="qr-region"></div>
+      <p class="qr-help">카메라 권한이 필요합니다. iOS는 HTTPS 또는 localhost 환경에서만 동작합니다.</p>
+      <div class="row">
+        <button class="btn btn-secondary" id="btn-mock-qr">Mock 스캔</button>
+        <button class="btn btn-ghost" id="btn-cancel-qr">취소</button>
+      </div>
+    </main>
+
+    <!-- =============== 화면: 설정 =============== -->
+    <main class="screen" id="screen-settings">
+      <div class="account-card" id="account-card"></div>
+      <div class="list">
+        <div class="list-item" id="row-provider">
+          <div>
+            <div class="label">AI 제공자</div>
+            <div class="value">웹 세션 또는 API 선택</div>
+          </div>
+          <div class="value" id="setting-provider">—</div>
+        </div>
+        <div class="list-item">
+          <div>
+            <div class="label">알림</div>
+            <div class="value">링크 리마인더 푸시</div>
+          </div>
+          <div class="toggle on" id="toggle-notif"></div>
+        </div>
+        <div class="list-item">
+          <div>
+            <div class="label">다크 모드</div>
+            <div class="value">라이트 / 다크</div>
+          </div>
+          <div class="toggle" id="toggle-theme"></div>
+        </div>
+        <div class="list-item">
+          <div>
+            <div class="label">하이라이트 컬러</div>
+            <div class="value">핑크 / 블루 / 그레이</div>
+          </div>
+          <div class="accent-picker" id="accent-picker">
+            <button class="accent-swatch" data-accent="pink" aria-label="핑크"></button>
+            <button class="accent-swatch" data-accent="blue" aria-label="블루"></button>
+            <button class="accent-swatch" data-accent="gray" aria-label="그레이"></button>
+          </div>
+        </div>
+        <div class="list-item" id="row-account">
+          <div>
+            <div class="label">계정 관리</div>
+            <div class="value">닉네임 · 연동 · 탈퇴</div>
+          </div>
+          <div class="value">›</div>
+        </div>
+      </div>
+      <p style="margin-top:24px;font-size:11px;color:var(--qlink-text-muted);text-align:center">
+        프로토타입 v0.1 · localStorage 기반 mock<br>
+        실서비스에선 React + PWA + Supabase로 구현됩니다
+      </p>
+    </main>
+
+    <!-- =============== 선택 모드 액션 바 =============== -->
+    <div class="selection-bar" id="selection-bar" hidden>
+      <button class="icon-btn" id="sel-cancel" aria-label="취소">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="sel-count">0개 선택</span>
+      <button class="sel-action" id="sel-all">전체</button>
+      <button class="sel-action" id="sel-share">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        공유
+      </button>
+      <button class="sel-action danger" id="sel-delete">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        삭제
+      </button>
+    </div>
+
+    <!-- =============== FAB =============== -->
+    <button class="fab" id="fab" aria-label="링크 추가">＋</button>
+
+    <!-- =============== 하단 탭 =============== -->
+    <nav class="tab-bar">
+      <button class="tab-item active" data-tab="home">
+        <span class="tab-icon-wrap"><img src="icon-home.png" alt="" /></span>
+        <span>홈</span>
+      </button>
+      <button class="tab-item" data-tab="folders">
+        <span class="tab-icon-wrap"><img src="icon-folder.png" alt="" /></span>
+        <span>폴더</span>
+      </button>
+      <button class="tab-item" data-tab="todo">
+        <span class="tab-icon-wrap"><img src="icon-todo.png" alt="" /></span>
+        <span>할일</span>
+      </button>
+      <button class="tab-item" data-tab="settings">
+        <span class="tab-icon-wrap"><img src="icon-settings.png" alt="" /></span>
+        <span>설정</span>
+      </button>
+    </nav>
+
+    <!-- =============== 시트: 링크 추가 =============== -->
+    <div class="sheet-backdrop"></div>
+    <div class="sheet" id="add-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">링크 추가</div>
+      <div class="sheet-stack">
+        <input class="input" id="input-url" placeholder="https://..." autocomplete="off" inputmode="url" />
+        <button class="btn btn-primary" id="btn-save-link">URL 저장</button>
+        <button class="btn btn-secondary" id="btn-open-qr">📷 QR 스캔으로 추가</button>
+        <div class="provider-mini">
+          <div class="provider-mini-info">
+            <div class="provider-mini-label">폴더</div>
+            <div class="provider-mini-value" id="add-folder-current">✨ AI 자동 분류</div>
+          </div>
+          <button class="provider-mini-change" id="btn-change-folder">변경</button>
+        </div>
+        <div class="provider-mini">
+          <div class="provider-mini-info">
+            <div class="provider-mini-label">AI 요약 제공자</div>
+            <div class="provider-mini-value" id="add-provider-current">—</div>
+          </div>
+          <button class="provider-mini-change" id="btn-change-provider">변경</button>
+        </div>
+        <button class="btn btn-ghost" id="btn-cancel-add">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 새 폴더 만들기 =============== -->
+    <div class="sheet" id="new-folder-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title" id="new-folder-title">새 폴더</div>
+      <div class="sheet-stack">
+        <input class="input" id="new-folder-name" placeholder="폴더 이름" autocomplete="off" />
+        <div class="picker-label">이모지</div>
+        <div class="emoji-grid" id="new-folder-emoji-grid"></div>
+        <div id="new-folder-shared-hint" class="invite-hint" hidden>
+          💌 만들고 나서 종이비행기 버튼으로 친구를 초대할 수 있어요
+        </div>
+        <button class="btn btn-primary" id="btn-new-folder-save">만들기</button>
+        <button class="btn btn-ghost" id="btn-new-folder-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 프로필 편집 =============== -->
+    <div class="sheet" id="edit-profile-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">프로필 편집</div>
+      <div class="sheet-stack">
+        <div class="avatar-preview-wrap">
+          <div class="avatar-preview-circle" id="edit-profile-preview"></div>
+          <label class="upload-avatar-btn" title="사진 업로드">
+            📷
+            <input type="file" id="edit-profile-upload" accept="image/*" hidden />
+          </label>
+        </div>
+        <div class="picker-label">프로필 사진</div>
+        <div class="emoji-grid avatar-grid" id="edit-profile-avatar-grid"></div>
+        <div class="picker-label">닉네임</div>
+        <input class="input" id="edit-profile-nickname" placeholder="닉네임" maxlength="12" />
+        <button class="btn btn-primary" id="btn-edit-profile-save">저장</button>
+        <button class="btn btn-ghost" id="btn-edit-profile-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: FAB 메뉴 (폴더 화면) =============== -->
+    <div class="sheet" id="fab-menu-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">새로 만들기</div>
+      <div class="sheet-stack">
+        <button class="btn fab-menu-btn" id="fab-menu-folder-personal">
+          <span class="fab-menu-emoji">📁</span>
+          <span class="fab-menu-label">
+            <strong>내 폴더 추가</strong>
+            <small>나만 보는 폴더</small>
+          </span>
+        </button>
+        <button class="btn fab-menu-btn" id="fab-menu-folder-shared">
+          <span class="fab-menu-emoji">👥</span>
+          <span class="fab-menu-label">
+            <strong>공유 폴더 추가</strong>
+            <small>친구와 함께 모으는 폴더</small>
+          </span>
+        </button>
+        <button class="btn fab-menu-btn" id="fab-menu-link">
+          <span class="fab-menu-emoji">🔗</span>
+          <span class="fab-menu-label">
+            <strong>링크 추가</strong>
+            <small>URL이나 QR 스캔으로</small>
+          </span>
+        </button>
+        <button class="btn btn-ghost" id="fab-menu-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 메모 편집 =============== -->
+    <div class="sheet" id="memo-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">메모</div>
+      <div class="sheet-stack">
+        <textarea class="input memo-textarea" id="memo-textarea" placeholder="간단한 메모를 적어보세요..." rows="5"></textarea>
+        <button class="btn btn-primary" id="btn-memo-save">저장</button>
+        <button class="btn btn-danger" id="btn-memo-delete" hidden>메모 삭제</button>
+        <button class="btn btn-ghost" id="btn-memo-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 할일 편집 (리마인더 포함) =============== -->
+    <div class="sheet" id="todo-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">할일</div>
+      <div class="sheet-stack">
+        <textarea class="input memo-textarea" id="todo-textarea" placeholder="이 링크와 관련된 할일을 적어보세요..." rows="3"></textarea>
+        <div class="picker-label">알림 (선택)</div>
+        <div class="reminder-grid" id="todo-reminder-grid"></div>
+        <button class="btn btn-primary" id="btn-todo-save">저장</button>
+        <button class="btn btn-danger" id="btn-todo-delete" hidden>할일 삭제</button>
+        <button class="btn btn-ghost" id="btn-todo-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 계정 관리 =============== -->
+    <div class="sheet" id="account-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">계정 관리</div>
+      <div class="account-rows">
+        <button class="account-row" id="account-row-nickname" type="button">
+          <div class="account-row-info">
+            <div class="account-row-label">닉네임</div>
+            <div class="account-row-value" id="account-row-nickname-value">—</div>
+          </div>
+          <span class="chevron">›</span>
+        </button>
+        <div class="account-row no-action">
+          <div class="account-row-info">
+            <div class="account-row-label">연동 계정</div>
+            <div class="account-row-value" id="account-row-provider-value">—</div>
+          </div>
+        </div>
+        <button class="account-row danger" id="account-row-reset" type="button">
+          <div class="account-row-info">
+            <div class="account-row-label">데이터 초기화</div>
+            <div class="account-row-value">링크·폴더·설정을 모두 지웁니다</div>
+          </div>
+          <span class="chevron">›</span>
+        </button>
+        <button class="account-row danger" id="account-row-leave" type="button">
+          <div class="account-row-info">
+            <div class="account-row-label">탈퇴</div>
+            <div class="account-row-value">계정과 모든 데이터가 삭제됩니다</div>
+          </div>
+          <span class="chevron">›</span>
+        </button>
+      </div>
+      <button class="btn btn-ghost" id="btn-account-close" style="margin-top:10px">닫기</button>
+    </div>
+
+    <!-- =============== 시트: 폴더 편집 =============== -->
+    <div class="sheet" id="edit-folder-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">폴더 편집</div>
+      <div class="sheet-stack">
+        <input class="input" id="edit-folder-name" placeholder="폴더 이름" autocomplete="off" />
+        <div class="picker-label">이모지</div>
+        <div class="emoji-grid" id="edit-folder-emoji-grid"></div>
+        <div id="edit-folder-shared-section" hidden>
+          <div class="picker-label">
+            함께하는 사람
+            <button class="invite-mini-btn" id="btn-edit-invite" type="button">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              초대
+            </button>
+          </div>
+          <div class="member-chips" id="edit-folder-members"></div>
+          <div class="invite-hint">
+            💌 멤버는 초대된 사람이 수락하면 자동으로 추가돼요
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-edit-folder-save">저장</button>
+        <button class="btn btn-danger" id="btn-edit-folder-delete">폴더 삭제</button>
+        <button class="btn btn-ghost" id="btn-edit-folder-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 카톡 공유 =============== -->
+    <div class="sheet" id="kakao-share-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">카카오톡으로 초대</div>
+      <div class="kakao-card" id="kakao-card-preview">
+        <div class="kakao-card-header">
+          <div class="kakao-icon">💬</div>
+          <div class="kakao-card-meta">
+            <div class="kakao-card-app">큐링크 (QLink)</div>
+            <div class="kakao-card-domain">qlink.app</div>
+          </div>
+        </div>
+        <div class="kakao-card-hero">
+          <div class="kakao-card-emoji" id="kakao-card-emoji">📚</div>
+          <div class="kakao-card-title" id="kakao-card-title">폴더 이름</div>
+          <div class="kakao-card-desc" id="kakao-card-desc">함께 정리해요</div>
+        </div>
+        <button class="kakao-cta">큐링크에서 열기</button>
+      </div>
+      <div class="sheet-stack" style="margin-top:12px">
+        <button class="btn btn-primary" id="btn-kakao-send">💛 친구에게 카톡 보내기</button>
+        <button class="btn btn-secondary" id="btn-kakao-copy">🔗 초대 링크 복사</button>
+        <button class="btn btn-ghost" id="btn-kakao-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- =============== 시트: 폴더 선택 =============== -->
+    <div class="sheet" id="folder-picker-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">폴더 선택</div>
+      <div class="radio-group" id="folder-picker-list"></div>
+      <p style="margin-top:12px;font-size:11px;color:var(--qlink-text-muted)">
+        선택하지 않으면 AI가 태그를 분석해서 자동으로 분류합니다.
+      </p>
+    </div>
+
+    <!-- =============== 시트: AI 제공자 선택 =============== -->
+    <div class="sheet" id="provider-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">AI 제공자 선택</div>
+      <div class="radio-group">
+        <div class="radio-item" data-id="gemini-web">
+          <div>
+            <div class="name">🟦 Gemini (웹 로그인)</div>
+            <div class="desc">gemini.google.com 세션 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+        <div class="radio-item" data-id="chatgpt-web">
+          <div>
+            <div class="name">🟢 ChatGPT (웹 로그인)</div>
+            <div class="desc">chatgpt.com 세션 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+        <div class="radio-item" data-id="claude-web">
+          <div>
+            <div class="name">🟧 Claude (웹 로그인)</div>
+            <div class="desc">claude.ai 세션 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+        <div class="radio-item" data-id="gemini-api">
+          <div>
+            <div class="name">Gemini API</div>
+            <div class="desc">공식 API 키 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+        <div class="radio-item" data-id="openai-api">
+          <div>
+            <div class="name">OpenAI API</div>
+            <div class="desc">공식 API 키 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+        <div class="radio-item" data-id="anthropic-api">
+          <div>
+            <div class="name">Anthropic API</div>
+            <div class="desc">공식 API 키 사용</div>
+          </div>
+          <span>›</span>
+        </div>
+      </div>
+      <p style="margin-top:12px;font-size:11px;color:var(--qlink-text-muted)">
+        웹 세션 옵션은 Chrome Extension 브릿지가 필요합니다 (실서비스 구현 예정).
+      </p>
+    </div>
+
+    <!-- 토스트 -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="app.js?v=28"></script>
+</body>
+</html>

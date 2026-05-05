@@ -1,0 +1,21 @@
+{
+  "name": "QLINK — 큐링크",
+  "short_name": "QLINK",
+  "description": "링크와 QR을 AI가 정리해주는 핑크빛 북마크",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#FF6B9D",
+  "background_color": "#FFF7FB",
+  "lang": "ko",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
