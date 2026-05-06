@@ -1,5 +1,9 @@
 # Supabase 셋업 가이드
 
+> ⚠️ **이 폴더는 현재 [prototype/](../prototype/)가 사용하는 라이브 백엔드입니다.**
+> **실서비스 DB는 AWS로 신규 설계됩니다 — [docs/database.md](../docs/database.md) 참고.**
+> 본 문서는 프로토타입 재현·과거 스키마 참조용으로 유지됩니다.
+
 ## 1. 프로젝트 생성
 
 1. https://supabase.com 가입 → "New project"

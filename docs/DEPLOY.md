@@ -26,20 +26,11 @@ npx vercel --prod   # 프로덕션 배포
 
 ## B. React 앱 (`app/`) 배포
 
-### B-1. GitHub에 push
+### B-1. GitHub
 
-```bash
-cd /Users/inwoo/MyAgents/qlink
-git init
-git add .
-git commit -m "Initial commit: QLINK prototype + React app"
-gh repo create qlink --private --source=. --push   # gh CLI 사용 시
-# 또는 GitHub 웹에서 빈 레포 만들고
-git remote add origin git@github.com:USER/qlink.git
-git push -u origin main
-```
+레포: https://github.com/inwoo-jang/qlink — Vercel과 이미 연결되어 `main` 푸시 시 자동 배포됩니다 (현재는 `prototype/`이 output, React 앱으로 전환 시 B-2 참고).
 
-`.gitignore`에 `node_modules`, `dist`, `.env*` 들어가 있는지 확인.
+`.gitignore`에 `node_modules`, `dist`, `.env*`, `.vercel` 포함 확인.
 
 ### B-2. Vercel 연결
 

@@ -6,52 +6,30 @@ URL/QR 북마크 정리·공유 앱. AI가 자동 요약·분류해주는 모바
 
 ```
 qlink/
-├── readme.md            # 원본 기획 메모
-├── PROJECT.md           # 이 파일 — 전체 구조와 실행 가이드
-├── agents/              # 역할별 에이전트 정의 (병렬 작업의 단위)
-│   ├── product-planner.md
-│   ├── ux-ui-designer.md
-│   ├── frontend-developer.md
-│   ├── backend-developer.md
-│   ├── ai-integration-developer.md
-│   ├── qa-engineer.md
-│   └── devops-engineer.md
-├── skills/              # 에이전트가 사용하는 스킬(작업 매뉴얼)
-│   ├── prd-writing.md
-│   ├── user-flow-design.md
-│   ├── feature-spec.md
-│   ├── wireframing.md
-│   ├── ui-design-system.md
-│   ├── react-pwa-implementation.md
-│   ├── qr-scanner-integration.md
-│   ├── ai-web-bridge.md
-│   ├── backend-api-spec.md
-│   ├── qa-testing.md
-│   └── deployment.md
-├── prototype/           # 즉시 실행 가능한 HTML 목업 (디자인·플로우 검증용)
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
-├── app/                 # React + Vite + TS + PWA (실서비스 본체)
-│   ├── src/
-│   │   ├── components/
-│   │   ├── features/
-│   │   ├── lib/
-│   │   └── styles/
-│   ├── public/
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── README.md
-├── supabase/            # 백엔드 (Postgres + Auth + RLS)
-│   ├── migrations/0001_initial_schema.sql
-│   └── README.md
-├── extension/           # Chrome 확장 PoC (Gemini 웹세션 브릿지)
-│   ├── manifest.json
-│   ├── background.js
-│   ├── content/qlink-bridge.js
-│   ├── content/gemini.js
-│   └── README.md
-└── DEPLOY.md            # Vercel + 도메인 + CI/CD 배포 가이드
+├── README.md            # 개발자용 quick-start (루트)
+├── prototype/           # 즉시 실행 가능한 HTML 목업 (디자인·플로우 검증용, 라이브 데모)
+│   ├── index.html, styles.css, app.js
+│   └── supabase-*.js    # 프로토타입 백엔드(이전 단계, anon key 공개)
+├── app/                 # React + Vite + TS + PWA (실서비스 본체, 부트스트랩만)
+│   ├── src/{components,features,lib,styles}/, public/
+│   └── package.json, vite.config.ts, README.md
+├── extension/           # Chrome 확장 PoC (Gemini/ChatGPT 웹세션 브릿지)
+│   ├── manifest.json, background.js
+│   └── content/{qlink-bridge.js, gemini.js}
+├── supabase/            # 프로토타입의 현재 라이브 백엔드 (Postgres+Auth+RLS)
+│   ├── migrations/00{01,02,03}_*.sql
+│   └── email-templates/
+│   # ⚠️ 실서비스 DB는 AWS로 신규 설계 — docs/database.md 참고
+├── docs/
+│   ├── brief.md         # 원본 기획 메모
+│   ├── PROJECT.md       # 이 파일 — 전체 구조 + 병렬 작업 시나리오
+│   ├── DEPLOY.md        # Vercel + 도메인 + CI/CD 배포 가이드
+│   ├── database.md      # AWS DB 설계 (엔티티 / 권한 / 마이그레이션 출처)
+│   ├── agents/          # 역할별 에이전트 정의 (병렬 작업 단위)
+│   ├── skills/          # 에이전트가 사용하는 스킬 매뉴얼
+│   └── screenshots/     # 화면 캡처 (홈/폴더/검색/설정/할일)
+├── vercel.json          # 정적 배포 설정 (output: prototype/)
+└── .gitignore
 ```
 
 ## 에이전트 ↔ 스킬 매핑
@@ -71,11 +49,12 @@ qlink/
 - **프론트엔드**: React 19 + Vite + TypeScript + Tailwind + PWA
 - **상태**: Zustand + TanStack Query
 - **QR**: html5-qrcode
-- **백엔드**: Supabase (Postgres + Auth + Edge Functions) — MVP에 최적
+- **백엔드 (실서비스)**: AWS 직접 설계 — RDS(Postgres) + Cognito(Auth) + Lambda + API Gateway. 상세는 [database.md](database.md)
+- **백엔드 (현재 프로토타입)**: Supabase (Postgres + Auth + RLS) — 라이브 데모용으로만 유지
 - **AI 통합**:
   - 메인: Chrome Extension이 사용자 웹 Gemini/ChatGPT/Claude 세션을 통해 요약 (사용자 비용 0)
   - 폴백: 사용자 본인 API 키
-- **배포**: Vercel(웹) + Supabase(백엔드)
+- **배포**: Vercel(웹) + AWS(API/DB)
 - **모니터링**: Sentry + PostHog
 
 ## AI 통합 방식 (핵심 결정)
