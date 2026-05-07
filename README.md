@@ -66,6 +66,13 @@ cd prototype && python3 -m http.server 8000
 
 ## 자주 보는 문서
 
+**기획 (docs/planning/)**
+- 프로젝트 개요: [docs/planning/01_프로젝트개요.md](docs/planning/01_프로젝트개요.md)
+- PRD: [docs/planning/02_PRD.md](docs/planning/02_PRD.md)
+- 유저플로우: [docs/planning/04_유저플로우.md](docs/planning/04_유저플로우.md)
+- 상세 기능명세서: [docs/planning/05_상세기능명세서.md](docs/planning/05_상세기능명세서.md) + [.xlsx](docs/planning/05_상세기능명세서.xlsx)
+
+**구조·DB·배포**
 - 전체 구조: [docs/PROJECT.md](docs/PROJECT.md)
 - DB 설계 (AWS): [docs/database.md](docs/database.md)
 - 배포: [docs/DEPLOY.md](docs/DEPLOY.md)
