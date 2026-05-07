@@ -69,8 +69,10 @@ cd prototype && python3 -m http.server 8000
 **기획 (docs/planning/)**
 - 프로젝트 개요: [docs/planning/01_프로젝트개요.md](docs/planning/01_프로젝트개요.md)
 - PRD: [docs/planning/02_PRD.md](docs/planning/02_PRD.md)
+- IA (정보 구조 / 사이트맵 / 라우팅): [docs/planning/03_IA.md](docs/planning/03_IA.md)
 - 유저플로우: [docs/planning/04_유저플로우.md](docs/planning/04_유저플로우.md)
 - 상세 기능명세서: [docs/planning/05_상세기능명세서.md](docs/planning/05_상세기능명세서.md) + [.xlsx](docs/planning/05_상세기능명세서.xlsx)
+- 백엔드 API 명세서: [docs/planning/06_API명세서.md](docs/planning/06_API명세서.md)
 
 **구조·DB·배포**
 - 전체 구조: [docs/PROJECT.md](docs/PROJECT.md)
