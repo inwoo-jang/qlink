@@ -703,6 +703,56 @@ wss://ws.qlink.app/v1?token={accessToken}&deviceId={uuid}
 
 ---
 
+## 10.5 AI 폴백 어댑터 (구현 가이드)
+
+> POLICY-AI(`05_상세기능명세서.md §C`) 참고. 백엔드 워커 Lambda 구현 시 다음 인터페이스로 추상화.
+
+### 시나리오별 우선순위 매트릭스
+
+| 시나리오 | 시점 | 1차 | 2차 | 3차 |
+|---|---|---|---|---|
+| **단건 저장** (`POST /links` 직후 비동기) | MVP | 사용자 API 키 | mock | — |
+| **단건 저장** | v1.x | 사용자 API 키 | mock | — (외부 세션 미사용 — 즉각성 우선) |
+| **일괄 import** (`POST /imports/.../confirm`) | MVP | 사용자 API 키 | mock | — |
+| **일괄 import** | v1.x | Chrome 확장 외부 세션 | 사용자 API 키 | mock |
+
+### 인터페이스 (TypeScript 권장)
+
+```ts
+interface AIProvider {
+  id: 'user_api_key' | 'chrome_extension' | 'mock';
+  available(userId: string): Promise<boolean>;       // 폴백 판정
+  summarize(input: { url: string; meta?: PageMeta }): Promise<{
+    oneLiner: string;
+    tags: string[];
+    rawResponse?: unknown;
+  }>;
+  timeoutMs: number;       // 단건 1400, 일괄 30000
+}
+
+async function callAIWithFallback(ladder: AIProvider[], input) {
+  for (const p of ladder) {
+    if (!await p.available(userId)) continue;
+    try {
+      return await withTimeout(p.summarize(input), p.timeoutMs);
+    } catch (e) {
+      logger.warn(`AI provider ${p.id} failed`, e);
+      continue;
+    }
+  }
+  // 모든 폴백 실패 → 빈 요약
+  return { oneLiner: '', tags: [], failed: true };
+}
+```
+
+### 응답 보존
+모든 호출은 결과 무관하게 `ai_jobs` 테이블에 INSERT — 디버깅·재처리용:
+```
+ai_jobs (id, link_id, provider, status, raw_response jsonb, error, created_at, completed_at)
+```
+
+---
+
 ## 11. AWS 인프라 매핑
 
 | 영역 | AWS 서비스 | 메모 |

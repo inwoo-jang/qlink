@@ -92,7 +92,8 @@ LIST_ROWS = [
     ("POLICY-AUTH", "정책", "토큰 만료/갱신", "JWT 액세스 15분 + 리프레시 30일", "MVP", "Must", ""),
     ("POLICY-AI", "정책", "AI 요약 호출", "외부 세션→API→mock 폴백 사다리", "MVP", "Must", ""),
     ("POLICY-LOCAL", "정책", "로컬·서버 저장 분리", "게스트 로컬 / 정식 서버+캐시, 오프라인 큐잉", "MVP", "Must", ""),
-    ("POLICY-SHARED", "정책", "공유 폴더 권한", "owner/member/viewer + 토큰 7일", "일부포함", "Should", ""),
+    ("POLICY-SHARED", "정책", "공유 폴더 권한", "owner/member/viewer + 토큰 7일 + 멤버 50명", "일부포함", "Should", ""),
+    ("POLICY-VISIBILITY", "정책", "공유 폴더 콘텐츠 가시성", "할 일 private/public 선택 + 메모 항상 private + 수락 필요 모델", "MVP", "Must", ""),
 ]
 
 # ===== Sheet 2: 기능명세_상세 — 기능별 detail rows =====
@@ -487,6 +488,14 @@ DETAIL_FEATURES = [
         ("정책", "[역할] owner: 폴더·링크·멤버 전체 권한 / member: 링크 추가·읽기·자기 추가한 링크 삭제 / viewer: 읽기만\n[기본] 초대 수락 시 role='member'\n[토큰] 유효 7일, 1회용 아님(여러 명 사용 가능)\n[멤버 한도] 50명"),
         ("예외", "권한 부족 액션은 UI에서 비활성 + 툴팁. 백엔드는 항상 재검증 (Lambda 핸들러)"),
     ]),
+    ("POLICY-VISIBILITY", [], "정책", "공유 폴더 콘텐츠 가시성", "Must", "", "MVP", "기획완료",
+     "TODO-009/010 공통 정책. 메모와 할 일의 가시성 규칙이 다름",
+     [
+        ("설명", "공유 폴더 link의 부속 콘텐츠(할 일·메모) 노출 규칙. TODO-009/010 공통 사용"),
+        ("정책", "[할 일] visibility: 'private'(default) | 'public'. 사용자 선택\n[메모] visibility 컬럼 없음. 항상 private. UI에 '🔒 나만 볼 수 있는 내용입니다' 안내\n[작성자 표시] public todo는 멤버에게 '👥 {닉네임}이 공유한 할 일'\n[수락 모델] public todo는 명시적 수락(POST /todos/:id/accept)해야 본인 알림 등록\n[DB 일관성] 메모 public 변경 API 호출은 백엔드 차단(400)"),
+        ("예외", "- 비멤버 조회: 403\n- 자기 todo 수락 시도: UI 비활성, API CONFLICT\n- public→private 전환: 기존 수락자 알림 즉시 제거 + Realtime publish\n- 작성자가 public 삭제: 수락 멤버 알림 일괄 제거 (이중 확인 모달)"),
+        ("마이그레이션", "개인 폴더 → 공유 폴더 전환(SHARE-001) 시 기존 todo 자동 'private'. 사용자가 개별 변경"),
+    ]),
 ]
 
 
@@ -626,10 +635,15 @@ def build_workbook(out_path: str):
 
     ws_h.cell(row=3, column=1, value=f"v{VERSION}.1")
     ws_h.cell(row=3, column=2, value=TODAY)
-    ws_h.cell(row=3, column=3, value="결정 12건 반영: 이메일 6자리·게스트 출시 제거(Won't)·AI 폴백(MVP=mock+API키, v1.x=외부세션)·FCM Topic 분배+모바일/PC 채널 분리·비밀번호 변경 시 강제 로그아웃·즉시 hard delete·AWS API Gateway WebSocket·last-write-wins·공유멤버 50명·강조색 3색(핑크/블루/그레이)·단건 외부세션 미사용")
+    ws_h.cell(row=3, column=3, value="결정 12건 반영 + 할 일 = 1차 USP 격상: TODO-001~005 Must 추가, 페르소나 시나리오 3개(직장인 PM·취준생·자격증), 다중 할 일·반복 알림(요일+시간) UX, 회차별 완료 + 누적 이력 토글")
     ws_h.cell(row=3, column=4, value="인우")
 
-    for r in (2, 3):
+    ws_h.cell(row=4, column=1, value=f"v{VERSION}.2")
+    ws_h.cell(row=4, column=2, value=TODAY)
+    ws_h.cell(row=4, column=3, value="공유 폴더 가시성·수락 흐름: TODO-009(할 일 private/public 선택), TODO-010(공개 할 일 수락), POLICY-VISIBILITY 신규, 메모 항상 비공개 + 안내 문구. FLOW-017 추가, 색상 가독성 전면 개선(--qlink-primary 기반)")
+    ws_h.cell(row=4, column=4, value="인우")
+
+    for r in (2, 3, 4):
         for c in range(1, 5):
             ws_h.cell(row=r, column=c).alignment = WRAP_TOP
 
