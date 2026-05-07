@@ -733,6 +733,85 @@ a { color: inherit; text-decoration: none; }
   background: rgba(255, 200, 220, 0.08);
   border-color: rgba(255, 200, 220, 0.18);
 }
+
+/* ===== 다중 할 일 편집기 ===== */
+#todos-editor-list { display: flex; flex-direction: column; gap: 12px; }
+.todo-edit-row {
+  background: var(--qlink-bg-soft, rgba(255,255,255,0.6));
+  border: 1px solid var(--qlink-border, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+[data-theme="dark"] .todo-edit-row {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
+}
+.todo-row-header { display: flex; gap: 8px; align-items: center; }
+.todo-row-header .todo-title-input { flex: 1; }
+.btn-remove-todo {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: transparent; border: 1px solid rgba(0,0,0,0.15);
+  font-size: 14px; line-height: 1; cursor: pointer; color: var(--qlink-muted);
+  flex-shrink: 0;
+}
+[data-theme="dark"] .btn-remove-todo { border-color: rgba(255,255,255,0.2); }
+.btn-remove-todo:hover { background: rgba(255,80,80,0.1); border-color: rgba(255,80,80,0.4); color: #d44; }
+
+.todo-mode-chips { display: flex; gap: 6px; }
+.mode-chip {
+  flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 600;
+  border-radius: 8px; border: 1px solid var(--qlink-border, rgba(0,0,0,0.1));
+  background: transparent; color: var(--qlink-muted); cursor: pointer;
+  transition: all 0.15s;
+}
+[data-theme="dark"] .mode-chip { border-color: rgba(255,255,255,0.12); }
+.mode-chip.selected {
+  background: var(--qlink-accent-soft, rgba(255,100,150,0.15));
+  border-color: var(--qlink-accent, #FF6B9D);
+  color: var(--qlink-accent, #FF6B9D);
+}
+
+.todo-mode-config {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 4px; border-top: 1px dashed var(--qlink-border, rgba(0,0,0,0.06));
+}
+[data-theme="dark"] .todo-mode-config { border-color: rgba(255,255,255,0.08); }
+.todo-mode-config .picker-label { font-size: 11px; margin-bottom: 0; }
+.todo-mode-config input[type="datetime-local"],
+.todo-mode-config input[type="time"],
+.todo-mode-config input[type="date"] {
+  font-size: 13px; padding: 8px 10px;
+}
+
+.weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.weekday-chip {
+  padding: 8px 0; font-size: 12px; font-weight: 600;
+  border-radius: 8px; border: 1px solid var(--qlink-border, rgba(0,0,0,0.1));
+  background: transparent; color: var(--qlink-muted); cursor: pointer;
+  transition: all 0.15s;
+}
+[data-theme="dark"] .weekday-chip { border-color: rgba(255,255,255,0.12); }
+.weekday-chip.selected {
+  background: var(--qlink-accent, #FF6B9D);
+  border-color: var(--qlink-accent, #FF6B9D);
+  color: white;
+}
+.todo-recurring-preview {
+  font-size: 12px; color: var(--qlink-muted); padding: 4px 0;
+  font-style: italic;
+}
+
+/* 할 일 카드의 다중 todo 표시 */
+.todo-list-mini { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.todo-mini-line { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.todo-mini-line.is-done { text-decoration: line-through; opacity: 0.55; }
+.todo-mini-badge {
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,100,150,0.12); color: var(--qlink-accent, #FF6B9D);
+  white-space: nowrap;
+}
+.todo-mini-more { font-size: 11px; color: var(--qlink-muted); padding-left: 4px; }
 .sheet-title {
   font-size: 16px; font-weight: 800; margin-bottom: 10px;
   background: var(--grad-primary);

@@ -381,6 +381,98 @@ Response **200**:
 
 ---
 
+## 6.5 Todos (`/links/:id/todos`, `/todos`)
+
+> 링크당 다중 할 일. 1회 알림 + 요일 기반 반복 알림 지원.
+
+### 6.5.1 POST /links/:id/todos
+한 링크에 할 일 1개 추가.
+
+Request:
+```json
+{
+  "title": "수요일 회의 전 검토",
+  "notifyMode": "none|once|recurring",
+  "notifyAt": "2026-05-13T08:30:00Z",        // notifyMode='once' 일 때
+  "recurrenceWeekdays": [1,2,3,4,5],         // notifyMode='recurring': 0=일~6=토 (평일=1~5)
+  "recurrenceTime": "21:00",                 // notifyMode='recurring': HH:MM (KST)
+  "recurrenceEnd": "2026-05-30"              // notifyMode='recurring' 종료일 (선택)
+}
+```
+
+검증:
+- `title`: 1~50자
+- `notifyMode='once'` → `notifyAt` 필수, 미래 시각
+- `notifyMode='recurring'` → `recurrenceWeekdays` 1개 이상, `recurrenceTime` 필수
+- `recurrenceEnd` ≤ 시작일 + 365일
+
+Response **201**: 생성된 Todo. EventBridge Rule 등록 (재발송용).
+
+Errors: `VALIDATION_ERROR`, `LINK_NOT_FOUND`, `TODO_LIMIT_EXCEEDED` (한 링크당 20개)
+
+### 6.5.2 GET /links/:id/todos
+링크의 할 일 목록.
+Response **200**: `{ "items": Todo[] }` (sort_order 순)
+
+### 6.5.3 PATCH /todos/:id
+부분 수정. 알림 시각·반복 변경 시 EventBridge Rule 재등록.
+Request: 위 fields 부분.
+Response **200**: 갱신된 Todo.
+
+### 6.5.4 DELETE /todos/:id
+삭제. EventBridge Rule 함께 제거.
+Response **204**.
+
+### 6.5.5 POST /todos/:id/complete
+완료 체크.
+Request: `{ "completed": true }` (`false`로 미완료 토글 가능)
+Response **200**: 갱신된 Todo.
+
+> 반복 알림 회차별 완료: 별도 `todo_occurrences` 테이블 (TBD, v1.x). v1.0 MVP는 "할 일 자체 완료" 또는 "이번 회차 스킵" 둘 중 사용자 결정 필요.
+
+### 6.5.6 GET /todos
+사용자의 모든 할 일 (전체 평탄화 — 할일 화면용).
+
+Query: `?filter=all|undone|upcoming|overdue|done&cursor&limit`
+- `undone`: completed_at IS NULL
+- `upcoming`: completed_at IS NULL AND (notify_at >= now OR recurring 다음 회차 있음)
+- `overdue`: completed_at IS NULL AND notify_at < now (1회만)
+- `done`: completed_at IS NOT NULL
+
+Response **200**:
+```json
+{
+  "items": [
+    {
+      "todo": Todo,
+      "link": { "id", "url", "title", "thumbnailUrl", "folderId" }
+    }
+  ],
+  "nextCursor": "..."
+}
+```
+
+### 6.5.7 Todo Model
+```json
+{
+  "id": "uuid",
+  "linkId": "uuid",
+  "ownerId": "uuid",
+  "title": "...",
+  "notifyMode": "none|once|recurring",
+  "notifyAt": "..." | null,
+  "recurrenceWeekdays": [1,2,3,4,5] | null,
+  "recurrenceTime": "21:00" | null,
+  "recurrenceEnd": "2026-05-30" | null,
+  "completedAt": "..." | null,
+  "sortOrder": 0,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+---
+
 ## 7. Search (`/search`)
 
 ### 7.1 GET /search
@@ -528,6 +620,10 @@ wss://ws.qlink.app/v1?token={accessToken}&deviceId={uuid}
 | `LINK_CREATED` | `{ "link": Link }` | 다른 디바이스에서 링크 생성 |
 | `LINK_UPDATED` | `{ "link": Link }` | UPDATE (요약 도착 / 편집 / 폴더 이동) |
 | `LINK_DELETED` | `{ "linkId": "uuid" }` | DELETE |
+| `TODO_CREATED` | `{ "todo": Todo }` | 다른 디바이스에서 할 일 추가 |
+| `TODO_UPDATED` | `{ "todo": Todo }` | 할 일 수정 (제목/알림/완료) |
+| `TODO_DELETED` | `{ "todoId": "uuid", "linkId": "uuid" }` | 할 일 삭제 |
+| `TODO_FIRED` | `{ "todoId", "linkId", "occurredAt" }` | 알림 발송 시점 (서버 → 클라 알림용 메타) |
 | `FOLDER_CREATED` | `{ "folder": Folder }` | |
 | `FOLDER_UPDATED` | `{ "folder": Folder }` | |
 | `FOLDER_DELETED` | `{ "folderId": "uuid" }` | |

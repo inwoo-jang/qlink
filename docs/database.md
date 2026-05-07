@@ -45,8 +45,14 @@
                 │    links    │──────▶│  ai_jobs   │
                 │ url, summary│       │ provider   │
                 │ tags[]      │       │ status     │
-                │ reminder_at │       └────────────┘
-                └─────────────┘
+                │             │       └────────────┘
+                │             │  1:N  ┌──────────────────┐
+                │             │──────▶│  link_todos ★    │
+                │             │       │ title, mode      │
+                │             │       │ notify_at        │
+                │             │       │ recurrence_*     │
+                └─────────────┘       │ completed_at     │
+                                      └──────────────────┘
 ```
 
 ---
@@ -132,6 +138,33 @@
 | created_at | timestamptz | |
 
 인덱스: `(token)`
+
+### `link_todos` (★ 신규 — 다중 할 일 + 반복 알림)
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| id | uuid PK | gen_random_uuid() |
+| link_id | uuid FK→links.id | cascade |
+| owner_id | uuid FK→profiles.id | 캐싱(권한 빠른 검증) |
+| title | text not null | ≤ 50자 |
+| notify_mode | text not null | 'none' \| 'once' \| 'recurring' |
+| notify_at | timestamptz | 'once' 모드일 때만 |
+| recurrence_weekdays | smallint[] | 'recurring': [0~6] (0=일·6=토). default `{0,1,2,3,4,5,6}`(매일) |
+| recurrence_time | time | 'recurring': 'HH:MM' |
+| recurrence_end | date | 'recurring' 종료일 (선택) |
+| completed_at | timestamptz | NULL=미완료 |
+| sort_order | integer default 0 | 같은 링크 내 정렬 |
+| created_at, updated_at | timestamptz | trigger |
+
+인덱스:
+- `(link_id, sort_order)` — 링크별 정렬
+- `(owner_id, completed_at, notify_at)` — 할일 화면 필터·정렬
+- `(notify_mode, notify_at)` where `notify_mode='once' AND completed_at IS NULL` — EventBridge 스케줄링용
+
+제약:
+- `link_todos_per_link_max`: trigger로 한 링크당 20개 제한 (`COUNT(*) WHERE link_id = NEW.link_id < 20`)
+- `notify_mode='once'` ⇒ `notify_at NOT NULL`
+- `notify_mode='recurring'` ⇒ `recurrence_weekdays NOT NULL AND recurrence_time NOT NULL`
 
 ### `ai_jobs`
 

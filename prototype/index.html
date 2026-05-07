@@ -388,17 +388,15 @@
       </div>
     </div>
 
-    <!-- =============== 시트: 할일 편집 (리마인더 포함) =============== -->
+    <!-- =============== 시트: 할일 편집 (다중 + 1회/반복 알림) =============== -->
     <div class="sheet" id="todo-sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-title">할일</div>
+      <div class="sheet-title">할 일</div>
       <div class="sheet-stack">
-        <textarea class="input memo-textarea" id="todo-textarea" placeholder="이 링크와 관련된 할일을 적어보세요..." rows="3"></textarea>
-        <div class="picker-label">알림 (선택)</div>
-        <div class="reminder-grid" id="todo-reminder-grid"></div>
-        <button class="btn btn-primary" id="btn-todo-save">저장</button>
-        <button class="btn btn-danger" id="btn-todo-delete" hidden>할일 삭제</button>
-        <button class="btn btn-ghost" id="btn-todo-cancel">취소</button>
+        <div id="todos-editor-list"></div>
+        <button type="button" class="btn btn-secondary" id="btn-todo-add-row">＋ 할 일 추가</button>
+        <button type="button" class="btn btn-primary" id="btn-todo-save-all">저장</button>
+        <button type="button" class="btn btn-ghost" id="btn-todo-cancel">취소</button>
       </div>
     </div>
 
