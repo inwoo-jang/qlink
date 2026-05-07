@@ -153,8 +153,25 @@
 | recurrence_time | time | 'recurring': 'HH:MM' |
 | recurrence_end | date | 'recurring' 종료일 (선택) |
 | completed_at | timestamptz | NULL=미완료 (none/once 모드에서만 사용) |
+| visibility | text not null default 'private' | **'private'(나만)** \| **'public'(공유 폴더 멤버에게 보임)**. 개인 폴더 todo는 항상 'private' |
 | sort_order | integer default 0 | 같은 링크 내 정렬 |
 | created_at, updated_at | timestamptz | trigger |
+
+### `todo_acceptances` (★ 신규 — 공유 폴더 공개 todo 수락 흐름)
+
+> 공유 폴더에서 멤버 A가 `visibility=public`으로 todo를 만들면, 다른 멤버 B는 화면에서 보지만 **수락**해야 본인 알림으로 등록됨. 수락 안 하면 단순 정보 표시만.
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| todo_id | uuid FK→link_todos.id | cascade, PK1 |
+| user_id | uuid FK→profiles.id | cascade, PK2 |
+| accepted_at | timestamptz not null | 수락 시각 |
+| dismissed | boolean default false | true면 "보지 않기" 처리 (수락도 거부도 아님) |
+
+PK: `(todo_id, user_id)`.
+인덱스: `(user_id, accepted_at desc)` — 사용자 알림 큐 빌드용.
+
+> 알림 발송 로직: 공개 todo의 알림 시각이 되면, 작성자 + `todo_acceptances`에 있는 모든 user_id에게 FCM Topic으로 발송. 수락 안 한 멤버는 발송 대상에서 제외.
 
 ### `todo_occurrences` (★ 신규 — 반복 알림 회차별 완료 이력)
 

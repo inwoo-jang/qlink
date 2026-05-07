@@ -396,7 +396,8 @@ Request:
   "notifyAt": "2026-05-13T08:30:00Z",        // notifyMode='once' 일 때
   "recurrenceWeekdays": [1,2,3,4,5],         // notifyMode='recurring': 0=일~6=토 (평일=1~5)
   "recurrenceTime": "21:00",                 // notifyMode='recurring': HH:MM (KST)
-  "recurrenceEnd": "2026-05-30"              // notifyMode='recurring' 종료일 (선택)
+  "recurrenceEnd": "2026-05-30",             // notifyMode='recurring' 종료일 (선택)
+  "visibility": "private|public"             // 공유 폴더의 link일 때만 의미. 기본 'private'
 }
 ```
 
@@ -446,7 +447,36 @@ Response **200**:
 - `notifyMode='recurring'` → `todo_occurrences`에 INSERT/DELETE (`completed=false`로 호출 시 해당 회차 삭제)
 - `notifyMode='once' | 'none'` → `link_todos.completed_at` UPDATE
 
-### 6.5.6 GET /todos/:id/occurrences
+### 6.5.6 POST /todos/:id/accept
+공유 폴더 공개 todo를 본인 알림으로 등록 (수락). `todo_acceptances` INSERT.
+
+Request: (없음 — 본인 인증 토큰으로 처리)
+Response **200**: `{ "todoId": "...", "acceptedAt": "..." }`
+
+Errors:
+- `FORBIDDEN`: 본인이 이미 작성자거나 폴더 멤버 아님
+- `CONFLICT`: 이미 수락한 상태
+- `VALIDATION_ERROR`: todo가 `visibility='private'` (수락 불가)
+
+부수효과: WebSocket `TODO_ACCEPTED` publish (작성자에게 수락 알림).
+
+### 6.5.7 DELETE /todos/:id/accept
+수락 취소 — 본인 알림에서 제거.
+Response **204**.
+
+### 6.5.8 GET /todos/:id/acceptances
+공개 todo의 수락 멤버 목록. 작성자/멤버만 조회 가능.
+Response **200**:
+```json
+{
+  "items": [
+    { "userId": "...", "displayName": "지훈", "avatar": "🌸", "acceptedAt": "..." }
+  ],
+  "count": 3
+}
+```
+
+### 6.5.9 GET /todos/:id/occurrences
 반복 todo의 누적 완료 이력. 누적 화면 토글에서 사용.
 Query: `?from=2026-05-01&to=2026-05-31` (선택, 미지정 시 최근 100회)
 Response **200**:
@@ -651,6 +681,8 @@ wss://ws.qlink.app/v1?token={accessToken}&deviceId={uuid}
 | `TODO_UPDATED` | `{ "todo": Todo }` | 할 일 수정 (제목/알림/완료) |
 | `TODO_DELETED` | `{ "todoId": "uuid", "linkId": "uuid" }` | 할 일 삭제 |
 | `TODO_FIRED` | `{ "todoId", "linkId", "occurredAt" }` | 알림 발송 시점 (서버 → 클라 알림용 메타) |
+| `TODO_ACCEPTED` | `{ "todoId", "userId", "displayName" }` | 공개 todo를 다른 멤버가 수락 (작성자 + 멤버 모두에게) |
+| `TODO_ACCEPT_DECLINED` | `{ "todoId", "userId" }` | 수락 취소 |
 | `FOLDER_CREATED` | `{ "folder": Folder }` | |
 | `FOLDER_UPDATED` | `{ "folder": Folder }` | |
 | `FOLDER_DELETED` | `{ "folderId": "uuid" }` | |

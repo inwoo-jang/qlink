@@ -896,10 +896,16 @@ function openLinkDetail(linkId) {
             const isOver = isTodoOverdue(t);
             const badge = fmtTodoBadge(t);
             const historyHtml = renderTodoHistory(t);
+            const sharedFolder = isLinkInSharedFolder(link);
+            const visBadge = sharedFolder
+              ? (t.visibility === 'public'
+                  ? `<span class="todo-visibility-badge public">👥 공유</span>`
+                  : `<span class="todo-visibility-badge">🔒 나만</span>`)
+              : '';
             return `<div class="todo-display-wrap${isDone ? ' is-done' : ''}">
               <button class="todo-done-toggle big${isDone ? ' is-done' : ''}" data-todo-toggle="${t.id}" aria-label="${isDone ? '미완료로' : '완료'}">${isDone ? '✓' : ''}</button>
               <div class="todo-display-body">
-                <div class="todo-display">${escapeHtml(t.title)}</div>
+                <div class="todo-display">${escapeHtml(t.title)} ${visBadge}</div>
                 ${badge ? `<div class="reminder-card-line${isOver && !isDone ? ' overdue' : ''}" style="margin-top:6px">${badge}${isOver && !isDone ? ' (지남)' : ''}</div>` : ''}
                 ${historyHtml}
               </div>
@@ -909,6 +915,7 @@ function openLinkDetail(linkId) {
     </div>
     <div class="detail-section">
       <h4>📝 메모</h4>
+      ${isLinkInSharedFolder(link) ? `<div class="memo-privacy-note">🔒 나만 볼 수 있는 내용입니다. 공유자에게는 보이지 않아요.</div>` : ''}
       ${link.memo
         ? `<div class="memo-display">${escapeHtml(link.memo)}</div>
            <button class="btn btn-secondary" id="btn-edit-memo" style="margin-top:8px">메모 수정</button>`
@@ -1220,6 +1227,9 @@ function createEmptyTodoDraft() {
     notifyTime: '09:00',   // recurring HH:MM
     endDate: null,         // recurring 종료일 (YYYY-MM-DD)
     completed: false,
+    completions: [],
+    visibility: 'private', // 공유 폴더에서만 의미. private(나만) / public(공유자에게 보임)
+    acceptances: [],       // public인 경우 수락한 멤버 이름들
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -1228,11 +1238,13 @@ function createEmptyTodoDraft() {
 // localStorage·legacy 데이터의 link.todo/reminderAt/todoDone → link.todos[0] 마이그레이션
 function migrateLegacyTodos(link) {
   if (Array.isArray(link.todos)) {
-    // v1.1.1: 반복 todo에 completions[] 보장
+    // v1.1.1: 반복 todo에 completions[] 보장 / v1.2: visibility·acceptances 보장
     link.todos.forEach(t => {
       if (t.notifyMode === 'recurring' && !Array.isArray(t.completions)) {
         t.completions = [];
       }
+      if (!t.visibility) t.visibility = 'private';
+      if (!Array.isArray(t.acceptances)) t.acceptances = [];
     });
     return;
   }
@@ -1248,10 +1260,17 @@ function migrateLegacyTodos(link) {
       endDate: null,
       completed: !!link.todoDone,
       completions: [],
+      visibility: 'private',
+      acceptances: [],
       createdAt: link.createdAt || Date.now(),
       updatedAt: Date.now(),
     });
   }
+}
+
+function isLinkInSharedFolder(link) {
+  const f = state.folders.find(fo => fo.id === link.folderId);
+  return !!(f && f.shared);
 }
 
 /* ===== 회차별 완료 헬퍼 (반복 알림 todo 전용) ===== */
@@ -1374,13 +1393,16 @@ function datetimeLocalToTs(s) {
 let todoEditorDrafts = []; // {id,title,notifyMode,...}[]
 let todoEditingLinkIdNew = null;
 
+let todoEditorIsShared = false;
+
 function openTodoEditor(linkId) {
   const link = state.links.find(l => l.id === linkId);
   if (!link) return;
   migrateLegacyTodos(link);
   todoEditingLinkIdNew = linkId;
+  todoEditorIsShared = isLinkInSharedFolder(link);
   // 기존 할 일들 깊은 복사 (수정 취소 가능하도록)
-  todoEditorDrafts = (link.todos || []).map(t => ({ ...t }));
+  todoEditorDrafts = (link.todos || []).map(t => ({ ...t, completions: (t.completions || []).slice(), acceptances: (t.acceptances || []).slice() }));
   if (todoEditorDrafts.length === 0) todoEditorDrafts.push(createEmptyTodoDraft());
   renderTodoEditor();
   $$('.sheet').forEach(s => s.classList.remove('open'));
@@ -1413,6 +1435,24 @@ function renderTodoEditRow(d, idx) {
       </div>
       ${d.notifyMode === 'once' ? renderOnceConfig(d, idx) : ''}
       ${d.notifyMode === 'recurring' ? renderRecurringConfig(d, idx) : ''}
+      ${todoEditorIsShared ? renderVisibilityRow(d, idx) : ''}
+    </div>
+  `;
+}
+
+function renderVisibilityRow(d, idx) {
+  const isPublic = d.visibility === 'public';
+  const hint = isPublic
+    ? '👥 공유자에게 보입니다. 공유자가 수락해야 본인 알림으로 등록돼요.'
+    : '🔒 나만 볼 수 있어요. 공유자에게는 보이지 않아요.';
+  return `
+    <div class="visibility-row">
+      <span class="visibility-label">공유 폴더 가시성</span>
+      <div class="visibility-chips">
+        <button type="button" class="visibility-chip ${!isPublic ? 'selected' : ''}" data-visibility="private" data-idx="${idx}">🔒 나만 보기</button>
+        <button type="button" class="visibility-chip ${isPublic ? 'selected' : ''}" data-visibility="public" data-idx="${idx}">👥 공유자에게 공유</button>
+      </div>
+      <div class="visibility-hint">${hint}</div>
     </div>
   `;
 }
@@ -1506,6 +1546,14 @@ function bindTodoEditorEvents() {
       renderTodoEditor();
     };
   });
+  // 가시성 chip (공유 폴더 전용)
+  $$('#todos-editor-list .visibility-chip').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.dataset.idx;
+      todoEditorDrafts[idx].visibility = btn.dataset.visibility;
+      renderTodoEditor();
+    };
+  });
 }
 
 function addTodoDraft() {
@@ -1558,6 +1606,8 @@ function saveAllTodos() {
       endDate: isRecurring ? (d.endDate || null) : null,
       completed: !!d.completed,
       completions: isRecurring ? (Array.isArray(d.completions) ? d.completions : []) : [],
+      visibility: todoEditorIsShared ? (d.visibility || 'private') : 'private',
+      acceptances: Array.isArray(d.acceptances) ? d.acceptances : [],
       createdAt: d.createdAt || now,
       updatedAt: now,
     };
