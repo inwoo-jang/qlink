@@ -152,9 +152,28 @@
 | recurrence_weekdays | smallint[] | 'recurring': [0~6] (0=일·6=토). default `{0,1,2,3,4,5,6}`(매일) |
 | recurrence_time | time | 'recurring': 'HH:MM' |
 | recurrence_end | date | 'recurring' 종료일 (선택) |
-| completed_at | timestamptz | NULL=미완료 |
+| completed_at | timestamptz | NULL=미완료 (none/once 모드에서만 사용) |
 | sort_order | integer default 0 | 같은 링크 내 정렬 |
 | created_at, updated_at | timestamptz | trigger |
+
+### `todo_occurrences` (★ 신규 — 반복 알림 회차별 완료 이력)
+
+> 사용자가 매주 강의 듣기처럼 반복 알림을 설정한 경우, "이번 주 완료 → 다음 주 또 알림 → 누적 완료 항목 표시" 흐름을 위한 테이블. 한 todo당 N개 행.
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| todo_id | uuid FK→link_todos.id | cascade, PK1 |
+| occurrence_date | date | 회차 발생 일자 (KST 기준), PK2 |
+| completed_at | timestamptz not null | 사용자가 완료 체크한 시각 |
+| created_at | timestamptz | default now() |
+
+PK: `(todo_id, occurrence_date)` — 한 todo의 같은 날짜는 1행만.
+
+인덱스:
+- `(todo_id, occurrence_date desc)` — 최근 N회 빠른 조회
+- `(todo_id, completed_at)` where `occurrence_date >= date_trunc('month', current_date)` — 이번 달 완료 횟수 빠른 집계 (partial index)
+
+> **MVP 단순화 옵션**: production은 별도 테이블, 클라이언트 프로토타입은 `link_todos.completions jsonb default '[]'` 한 컬럼으로 처리 (배열 형태 `[{date, completedAt}, ...]`). 트래픽이 늘어나면 별도 테이블로 마이그레이션.
 
 인덱스:
 - `(link_id, sort_order)` — 링크별 정렬

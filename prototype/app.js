@@ -275,6 +275,8 @@ function renderHome(filter = 'recent', folderId = null) {
   list.innerHTML = links.map(l => linkCardHtml(l, homeSearchQuery)).join('');
   $$('#home-list .link-card').forEach(card => {
     card.addEventListener('click', (e) => {
+      const histBtn = e.target.closest('[data-todo-history]');
+      if (histBtn) { e.stopPropagation(); toggleHistoryView(histBtn.dataset.todoHistory); return; }
       const toggle = e.target.closest('.todo-done-toggle');
       if (toggle) { e.stopPropagation(); toggleTodoDone(toggle.dataset.todoToggle); return; }
       handleCardClick(card.dataset.id);
@@ -288,7 +290,7 @@ function linkCardHtml(link, query = '', opts = {}) {
   const folderTag = folder ? `<span class="tag muted">${folder.emoji} ${folder.name}</span>` : '';
   const isPending = link.summary === null;
   const displayText = link.oneLiner || link.title || link.url;
-  // 할일 라인 — 다중 todos[] 표시 (legacy 필드는 마이그레이션 후 첫 todo로 변환됨)
+  // 할일 라인 — 다중 todos[]. 반복 모드는 "오늘 회차" 기준
   migrateLegacyTodos(link);
   const todos = link.todos || [];
   const overdue = todos.some(t => isTodoOverdue(t));
@@ -297,7 +299,7 @@ function linkCardHtml(link, query = '', opts = {}) {
     const visibleCount = Math.min(todos.length, 2);
     const lines = todos.slice(0, visibleCount).map(t => {
       const text = query ? highlight(t.title || '', query) : escapeHtml(t.title || '');
-      const isDone = !!t.completed;
+      const isDone = isTodoActiveCompleted(t);
       const isOver = isTodoOverdue(t);
       const checkBtn = `<button class="todo-done-toggle${isDone ? ' is-done' : ''}" data-todo-toggle="${t.id}" data-link-id="${link.id}" aria-label="${isDone ? '미완료로 변경' : '완료'}">${isDone ? '✓' : ''}</button>`;
       const badge = fmtTodoBadge(t);
@@ -768,49 +770,94 @@ function handleCardClick(linkId) {
   openLinkDetail(linkId);
 }
 
-// todoOrLinkId: data-todo-toggle 값. 새 모델에선 todoId, legacy/단일 모델에선 linkId 형태로 호환
-function toggleTodoDone(todoOrLinkId, linkIdHint) {
-  // 1) todoId로 매칭 시도 (새 다중 모델)
+// todoId 기반. 반복 모드면 오늘 회차 토글, 그 외면 completed 토글.
+function toggleTodoDone(todoOrLinkId) {
   for (const link of state.links) {
     migrateLegacyTodos(link);
     const t = (link.todos || []).find(x => x.id === todoOrLinkId);
-    if (t) {
+    if (!t) continue;
+    if (t.notifyMode === 'recurring') {
+      const todayStr = todayDateStr();
+      const idx = (t.completions || []).findIndex(c => c.date === todayStr);
+      if (!Array.isArray(t.completions)) t.completions = [];
+      if (idx >= 0) {
+        t.completions.splice(idx, 1);
+        toast('이번 회차 미완료로 변경');
+      } else {
+        t.completions.push({ date: todayStr, completedAt: Date.now() });
+        t.completions.sort((a, b) => b.date.localeCompare(a.date));
+        toast(`✓ 오늘 (${todayStr.slice(5)}) 완료!`);
+      }
+    } else {
       t.completed = !t.completed;
-      t.updatedAt = Date.now();
-      // legacy 필드 동기화 (첫 todo 기준)
-      if (link.todos[0]) {
-        link.todoDone = !!link.todos[0].completed;
-        link.todo = link.todos[0].title;
-      }
-      saveState();
-      cloudUpdateLink(link.id, { todos: link.todos, todoDone: !!link.todos[0]?.completed });
       toast(t.completed ? '✓ 완료로 표시' : '미완료로 변경');
-      if ($('#screen-todo').classList.contains('active')) renderTodo();
-      if ($('#screen-home').classList.contains('active')) renderHome();
-      if ($('#screen-folder-detail').classList.contains('active') && currentFolderDetailId) {
-        openFolderDetail(currentFolderDetailId);
-      }
-      if ($('#screen-link-detail').classList.contains('active')) openLinkDetail(link.id);
-      return;
     }
+    t.updatedAt = Date.now();
+    if (link.todos[0]) {
+      link.todoDone = isTodoActiveCompleted(link.todos[0]);
+      link.todo = link.todos[0].title;
+    }
+    saveState();
+    cloudUpdateLink(link.id, { todos: link.todos, todoDone: !!link.todoDone });
+    if ($('#screen-todo').classList.contains('active')) renderTodo();
+    if ($('#screen-home').classList.contains('active')) renderHome();
+    if ($('#screen-folder-detail').classList.contains('active') && currentFolderDetailId) {
+      openFolderDetail(currentFolderDetailId);
+    }
+    if ($('#screen-link-detail').classList.contains('active')) openLinkDetail(link.id);
+    return;
   }
-  // 2) linkId fallback (구버전 마크업 호환)
+  // linkId fallback (구버전 마크업)
   const link = state.links.find(l => l.id === todoOrLinkId);
   if (!link) return;
   migrateLegacyTodos(link);
-  if (link.todos && link.todos.length > 0) {
-    link.todos[0].completed = !link.todos[0].completed;
-    link.todos[0].updatedAt = Date.now();
-    link.todoDone = link.todos[0].completed;
-  } else {
-    link.todoDone = !link.todoDone;
-  }
-  saveState();
-  cloudUpdateLink(link.id, { todos: link.todos, todoDone: !!link.todoDone });
-  toast(link.todoDone ? '✓ 완료로 표시' : '미완료로 변경');
+  if (link.todos && link.todos[0]) toggleTodoDone(link.todos[0].id);
+}
+
+/* 누적 완료 이력 펼침 상태 */
+const expandedHistory = new Set();
+function toggleHistoryView(todoId) {
+  if (expandedHistory.has(todoId)) expandedHistory.delete(todoId);
+  else expandedHistory.add(todoId);
   if ($('#screen-todo').classList.contains('active')) renderTodo();
-  if ($('#screen-home').classList.contains('active')) renderHome();
-  if ($('#screen-link-detail').classList.contains('active')) openLinkDetail(link.id);
+  if ($('#screen-link-detail').classList.contains('active')) {
+    // 상세 화면에서 펼침 상태 유지하며 재렌더
+    const linkId = $('#link-detail-content')?.dataset.linkId;
+    // openLinkDetail은 다시 그림. 펼침 상태는 모듈 변수라 보존됨
+    // 직접 찾기
+    for (const l of state.links) {
+      if ((l.todos || []).some(t => t.id === todoId)) { openLinkDetail(l.id); break; }
+    }
+  }
+}
+
+function renderTodoHistory(todo) {
+  if (todo.notifyMode !== 'recurring') return '';
+  const completions = (todo.completions || []).slice().sort((a,b) => b.date.localeCompare(a.date));
+  if (completions.length === 0) return '';
+  const expanded = expandedHistory.has(todo.id);
+  // 이번 달 카운트
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const thisMonth = completions.filter(c => c.date.startsWith(ym)).length;
+  const summaryLine = `완료한 ${completions.length}회${thisMonth > 0 ? ` · 이번 달 ${thisMonth}회` : ''}`;
+  const arrow = expanded ? '▲' : '▼';
+  let listHtml = '';
+  if (expanded) {
+    const rows = completions.map(c => {
+      const d = parseDateStr(c.date);
+      const label = d ? `${d.getMonth()+1}/${d.getDate()} (${WEEKDAY_LABELS[d.getDay()]})` : c.date;
+      const at = c.completedAt ? new Date(c.completedAt) : null;
+      const atLabel = at ? `${String(at.getHours()).padStart(2,'0')}:${String(at.getMinutes()).padStart(2,'0')}` : '';
+      return `<div class="todo-history-row"><span class="todo-history-date">✓ ${label}</span><span class="todo-history-time">${atLabel}</span></div>`;
+    }).join('');
+    listHtml = `<div class="todo-history-list">${rows}</div>`;
+  }
+  return `
+    <div class="todo-history">
+      <button class="todo-history-toggle" data-todo-history="${todo.id}">✓ ${summaryLine} ${arrow}</button>
+      ${listHtml}
+    </div>`;
 }
 
 function openLinkDetail(linkId) {
@@ -845,14 +892,16 @@ function openLinkDetail(linkId) {
       <h4>✅ 할 일 ${link.todos && link.todos.length > 0 ? `<span style="color:var(--qlink-text-muted);font-weight:400;font-size:13px">${link.todos.length}개</span>` : ''}</h4>
       ${(link.todos && link.todos.length > 0)
         ? link.todos.map(t => {
-            const isDone = !!t.completed;
+            const isDone = isTodoActiveCompleted(t);
             const isOver = isTodoOverdue(t);
             const badge = fmtTodoBadge(t);
+            const historyHtml = renderTodoHistory(t);
             return `<div class="todo-display-wrap${isDone ? ' is-done' : ''}">
               <button class="todo-done-toggle big${isDone ? ' is-done' : ''}" data-todo-toggle="${t.id}" aria-label="${isDone ? '미완료로' : '완료'}">${isDone ? '✓' : ''}</button>
               <div class="todo-display-body">
                 <div class="todo-display">${escapeHtml(t.title)}</div>
                 ${badge ? `<div class="reminder-card-line${isOver && !isDone ? ' overdue' : ''}" style="margin-top:6px">${badge}${isOver && !isDone ? ' (지남)' : ''}</div>` : ''}
+                ${historyHtml}
               </div>
             </div>`;
           }).join('') + `<button class="btn btn-secondary" id="btn-edit-todo" style="margin-top:8px">할 일 수정 / 추가</button>`
@@ -880,9 +929,20 @@ function openLinkDetail(linkId) {
   $('#btn-move').onclick = () => moveLink(link);
   $('#btn-edit-todo')?.addEventListener('click', () => openTodoEditor(link.id));
   $('#btn-edit-memo')?.addEventListener('click', () => openMemoEditor(link.id));
-  $('#link-detail-content .todo-done-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleTodoDone(link.id);
+  // 다중 todo: 각 toggle 버튼이 자신의 todoId를 dataset에 가짐
+  $$('#link-detail-content .todo-done-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const todoId = btn.dataset.todoToggle;
+      if (todoId) toggleTodoDone(todoId);
+    });
+  });
+  // 누적 완료 history 토글
+  $$('#link-detail-content [data-todo-history]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleHistoryView(btn.dataset.todoHistory);
+    });
   });
   $('#btn-delete').onclick = () => {
     if (confirm('이 링크를 삭제할까요?')) {
@@ -1010,12 +1070,13 @@ function renderTodo() {
     return;
   }
 
-  // 각 todo를 카드처럼 렌더 (todo + 원본 링크 미리보기)
+  // 각 todo를 카드처럼 렌더 (todo + 원본 링크 미리보기 + 누적 history)
   list.innerHTML = items.map(({ link, todo }) => {
-    const isDone = !!todo.completed;
+    const isDone = isTodoActiveCompleted(todo);
     const isOver = isTodoOverdue(todo);
     const badge = fmtTodoBadge(todo);
     const checkBtn = `<button class="todo-done-toggle${isDone ? ' is-done' : ''}" data-todo-toggle="${todo.id}" aria-label="${isDone ? '미완료로' : '완료'}">${isDone ? '✓' : ''}</button>`;
+    const historyHtml = renderTodoHistory(todo);
     return `
       <article class="link-card todo-card${isOver && !isDone ? ' overdue' : ''}" data-id="${link.id}">
         <div class="link-thumb">
@@ -1028,12 +1089,15 @@ function renderTodo() {
             <span class="todo-card-text">${escapeHtml(todo.title)}</span>
             ${badge ? `<span class="reminder-card-line${isOver && !isDone ? ' overdue' : ''}" style="margin:0">${badge}${isOver && !isDone ? ' (지남)' : ''}</span>` : ''}
           </div>
+          ${historyHtml}
         </div>
       </article>`;
   }).join('');
 
   $$('#todo-list .link-card').forEach(card => {
     card.addEventListener('click', (e) => {
+      const histBtn = e.target.closest('[data-todo-history]');
+      if (histBtn) { e.stopPropagation(); toggleHistoryView(histBtn.dataset.todoHistory); return; }
       const toggle = e.target.closest('.todo-done-toggle');
       if (toggle) { e.stopPropagation(); toggleTodoDone(toggle.dataset.todoToggle); return; }
       handleCardClick(card.dataset.id);
@@ -1163,7 +1227,15 @@ function createEmptyTodoDraft() {
 
 // localStorage·legacy 데이터의 link.todo/reminderAt/todoDone → link.todos[0] 마이그레이션
 function migrateLegacyTodos(link) {
-  if (Array.isArray(link.todos)) return;
+  if (Array.isArray(link.todos)) {
+    // v1.1.1: 반복 todo에 completions[] 보장
+    link.todos.forEach(t => {
+      if (t.notifyMode === 'recurring' && !Array.isArray(t.completions)) {
+        t.completions = [];
+      }
+    });
+    return;
+  }
   link.todos = [];
   if (link.todo || link.reminderAt) {
     link.todos.push({
@@ -1175,10 +1247,70 @@ function migrateLegacyTodos(link) {
       notifyTime: '09:00',
       endDate: null,
       completed: !!link.todoDone,
+      completions: [],
       createdAt: link.createdAt || Date.now(),
       updatedAt: Date.now(),
     });
   }
+}
+
+/* ===== 회차별 완료 헬퍼 (반복 알림 todo 전용) ===== */
+
+function todayDateStr() { return formatDateStr(new Date()); }
+function formatDateStr(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function parseDateStr(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m-1, d, 0, 0, 0);
+}
+function dateStrToTs(dateStr, time) {
+  const d = parseDateStr(dateStr);
+  if (!d) return null;
+  const [h, m] = (time || '09:00').split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+function isOccurrenceCompleted(todo, dateStr) {
+  return !!(todo.completions || []).find(c => c.date === dateStr);
+}
+function getNextOccurrence(todo, fromTs = Date.now()) {
+  if (todo.notifyMode === 'once') return todo.notifyAt;
+  if (todo.notifyMode !== 'recurring') return null;
+  if (!todo.notifyTime) return null;
+  const wdays = new Set(todo.weekdays || []);
+  if (wdays.size === 0) return null;
+  const endTs = todo.endDate ? dateStrToTs(todo.endDate, '23:59') : null;
+  for (let offset = 0; offset < 14; offset++) {
+    const d = new Date(fromTs);
+    d.setDate(d.getDate() + offset);
+    if (!wdays.has(d.getDay())) continue;
+    const ts = dateStrToTs(formatDateStr(d), todo.notifyTime);
+    if (ts > fromTs && (!endTs || ts <= endTs)) return ts;
+  }
+  return null;
+}
+// 반복 todo의 "활성 회차" — 오늘이 해당 요일이면 오늘, 아니면 다음 예정일
+function getActiveOccurrenceDate(todo) {
+  if (todo.notifyMode !== 'recurring') return null;
+  const todayStr = todayDateStr();
+  const todayWd = new Date().getDay();
+  const wdays = new Set(todo.weekdays || []);
+  if (wdays.has(todayWd) && !isOccurrenceCompleted(todo, todayStr)) return todayStr;
+  // 오늘 완료했거나 오늘이 대상 아니면 다음 예정일
+  const next = getNextOccurrence(todo);
+  return next ? formatDateStr(new Date(next)) : todayStr;
+}
+function isTodayActiveAndOverdue(todo) {
+  if (todo.notifyMode !== 'recurring') return false;
+  const todayStr = todayDateStr();
+  if (isOccurrenceCompleted(todo, todayStr)) return false;
+  const todayWd = new Date().getDay();
+  if (!(todo.weekdays || []).includes(todayWd)) return false;
+  const targetTs = dateStrToTs(todayStr, todo.notifyTime);
+  return targetTs && targetTs < Date.now();
 }
 
 function migrateAllTodos() {
@@ -1204,16 +1336,27 @@ function fmtTodoBadge(todo) {
     return todo.notifyAt ? '⏰ ' + fmtReminderTime(todo.notifyAt) : '';
   }
   if (todo.notifyMode === 'recurring') {
-    return '🔁 ' + fmtRecurringPreview(todo.weekdays, todo.notifyTime);
+    const next = getNextOccurrence(todo);
+    const nextStr = next ? ` · 다음 ${fmtReminderTime(next)}` : '';
+    return '🔁 ' + fmtRecurringPreview(todo.weekdays, todo.notifyTime) + nextStr;
   }
   return '';
 }
 
-// once 모드 todo 의 임박/지남 판정
 function isTodoOverdue(todo) {
-  if (todo.completed) return false;
-  if (todo.notifyMode === 'once') return todo.notifyAt && todo.notifyAt < Date.now();
+  if (todo.notifyMode === 'once') {
+    return !todo.completed && todo.notifyAt && todo.notifyAt < Date.now();
+  }
+  if (todo.notifyMode === 'recurring') return isTodayActiveAndOverdue(todo);
   return false;
+}
+
+// 반복 todo: 오늘 회차 완료 여부 / once·none: completed 필드
+function isTodoActiveCompleted(todo) {
+  if (todo.notifyMode === 'recurring') {
+    return isOccurrenceCompleted(todo, todayDateStr());
+  }
+  return !!todo.completed;
 }
 
 function tsToDatetimeLocal(ts) {
@@ -1401,20 +1544,24 @@ function saveAllTodos() {
       toast(`${i+1}번째 할 일의 시간을 입력해주세요`); return;
     }
   }
-  // 저장
+  // 저장 (반복 모드는 completions[] 보존, 모드 변경 시 초기화)
   const now = Date.now();
-  link.todos = todoEditorDrafts.map(d => ({
-    id: d.id,
-    title: d.title.trim(),
-    notifyMode: d.notifyMode,
-    notifyAt: d.notifyMode === 'once' ? d.notifyAt : null,
-    weekdays: d.notifyMode === 'recurring' ? d.weekdays : null,
-    notifyTime: d.notifyMode === 'recurring' ? d.notifyTime : null,
-    endDate: d.notifyMode === 'recurring' ? (d.endDate || null) : null,
-    completed: !!d.completed,
-    createdAt: d.createdAt || now,
-    updatedAt: now,
-  }));
+  link.todos = todoEditorDrafts.map(d => {
+    const isRecurring = d.notifyMode === 'recurring';
+    return {
+      id: d.id,
+      title: d.title.trim(),
+      notifyMode: d.notifyMode,
+      notifyAt: d.notifyMode === 'once' ? d.notifyAt : null,
+      weekdays: isRecurring ? d.weekdays : null,
+      notifyTime: isRecurring ? d.notifyTime : null,
+      endDate: isRecurring ? (d.endDate || null) : null,
+      completed: !!d.completed,
+      completions: isRecurring ? (Array.isArray(d.completions) ? d.completions : []) : [],
+      createdAt: d.createdAt || now,
+      updatedAt: now,
+    };
+  });
   // legacy 필드는 호환성을 위해 첫 todo 기준으로 동기화 (cloudUpdateLink가 supabase column에 의존)
   if (link.todos.length > 0) {
     const first = link.todos[0];
@@ -1834,9 +1981,26 @@ function enterGuestMode() {
     mk({ url: 'https://www.typescriptlang.org/docs/handbook', domain: 'typescriptlang.org', title: 'TypeScript Handbook', oneLiner: 'TS 공식 핸드북', summary: '타입스크립트 기초~고급.', tags: ['typescript', 'docs'], folderId: 'g-study', createdAt: now - day * 3 }),
     mk({ url: 'https://leetcode.com', domain: 'leetcode.com', title: 'LeetCode', oneLiner: '알고리즘 문제 모음', summary: '코딩 인터뷰 준비.', tags: ['algorithm', 'interview'], folderId: 'g-study', todo: '하루 1문제씩', reminderAt: now + day, createdAt: now - day * 1,
       todos: [
-        { id: 'td_seed_1', title: '하루 1문제 풀기', notifyMode: 'recurring', notifyAt: null, weekdays: [1,2,3,4,5], notifyTime: '21:00', endDate: null, completed: false, createdAt: now - day * 1, updatedAt: now - day * 1 },
-        { id: 'td_seed_2', title: '주말 모의면접 1회', notifyMode: 'recurring', notifyAt: null, weekdays: [0,6], notifyTime: '10:00', endDate: null, completed: false, createdAt: now - day * 1, updatedAt: now - day * 1 },
-        { id: 'td_seed_3', title: '오답 노트 정리', notifyMode: 'once', notifyAt: now + day * 7, weekdays: null, notifyTime: null, endDate: null, completed: false, createdAt: now - day * 1, updatedAt: now - day * 1 },
+        { id: 'td_seed_1', title: '하루 1문제 풀기', notifyMode: 'recurring', notifyAt: null, weekdays: [1,2,3,4,5], notifyTime: '21:00', endDate: null, completed: false,
+          completions: (() => {
+            // 최근 평일 3회 완료 시드
+            const out = [];
+            const d = new Date();
+            let added = 0;
+            for (let back = 1; back <= 14 && added < 3; back++) {
+              const x = new Date(d); x.setDate(x.getDate() - back);
+              const wd = x.getDay();
+              if (wd >= 1 && wd <= 5) {
+                const pad = n => String(n).padStart(2, '0');
+                out.push({ date: `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`, completedAt: x.setHours(21, 30, 0, 0) });
+                added++;
+              }
+            }
+            return out;
+          })(),
+          createdAt: now - day * 14, updatedAt: now - day * 1 },
+        { id: 'td_seed_2', title: '주말 모의면접 1회', notifyMode: 'recurring', notifyAt: null, weekdays: [0,6], notifyTime: '10:00', endDate: null, completed: false, completions: [], createdAt: now - day * 1, updatedAt: now - day * 1 },
+        { id: 'td_seed_3', title: '오답 노트 정리', notifyMode: 'once', notifyAt: now + day * 7, weekdays: null, notifyTime: null, endDate: null, completed: false, completions: [], createdAt: now - day * 1, updatedAt: now - day * 1 },
       ] }),
 
     // 음악 (2)

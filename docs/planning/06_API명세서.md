@@ -424,11 +424,38 @@ Response **200**: 갱신된 Todo.
 Response **204**.
 
 ### 6.5.5 POST /todos/:id/complete
-완료 체크.
-Request: `{ "completed": true }` (`false`로 미완료 토글 가능)
-Response **200**: 갱신된 Todo.
+완료 체크. **반복(recurring) 모드는 회차별 완료, 그 외(none·once)는 todo 자체 완료**.
 
-> 반복 알림 회차별 완료: 별도 `todo_occurrences` 테이블 (TBD, v1.x). v1.0 MVP는 "할 일 자체 완료" 또는 "이번 회차 스킵" 둘 중 사용자 결정 필요.
+Request:
+```json
+{
+  "completed": true,
+  "occurrenceDate": "2026-05-07"   // recurring 모드만. 생략 시 오늘(KST)
+}
+```
+
+Response **200**:
+```json
+{
+  "todo": Todo,
+  "occurrences": [{ "date": "2026-05-07", "completedAt": "..." }]   // recurring 모드만
+}
+```
+
+동작:
+- `notifyMode='recurring'` → `todo_occurrences`에 INSERT/DELETE (`completed=false`로 호출 시 해당 회차 삭제)
+- `notifyMode='once' | 'none'` → `link_todos.completed_at` UPDATE
+
+### 6.5.6 GET /todos/:id/occurrences
+반복 todo의 누적 완료 이력. 누적 화면 토글에서 사용.
+Query: `?from=2026-05-01&to=2026-05-31` (선택, 미지정 시 최근 100회)
+Response **200**:
+```json
+{
+  "items": [{ "date": "2026-05-07", "completedAt": "2026-05-07T21:45:00+09:00" }],
+  "totals": { "all": 12, "thisMonth": 4 }
+}
+```
 
 ### 6.5.6 GET /todos
 사용자의 모든 할 일 (전체 평탄화 — 할일 화면용).

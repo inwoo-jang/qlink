@@ -812,6 +812,32 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
 }
 .todo-mini-more { font-size: 11px; color: var(--qlink-muted); padding-left: 4px; }
+
+/* 누적 완료 history (반복 알림 todo) */
+.todo-history { margin-top: 8px; }
+.todo-history-toggle {
+  background: transparent; border: none; padding: 4px 8px;
+  font-size: 12px; color: var(--qlink-muted); cursor: pointer;
+  border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 500;
+}
+.todo-history-toggle:hover { background: rgba(0,0,0,0.04); color: var(--qlink-text); }
+[data-theme="dark"] .todo-history-toggle:hover { background: rgba(255,255,255,0.05); }
+
+.todo-history-list {
+  margin-top: 6px;
+  max-height: 200px; overflow-y: auto;
+  background: rgba(0,0,0,0.025);
+  border-radius: 8px; padding: 6px 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+[data-theme="dark"] .todo-history-list { background: rgba(255,255,255,0.04); }
+.todo-history-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; padding: 3px 0;
+}
+.todo-history-date { color: var(--qlink-text); font-weight: 500; }
+.todo-history-time { color: var(--qlink-muted); font-size: 11px; }
 .sheet-title {
   font-size: 16px; font-weight: 800; margin-bottom: 10px;
   background: var(--grad-primary);
