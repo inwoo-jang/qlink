@@ -22,7 +22,7 @@ const todayDateStr = () => {
 
 /* ===== 시드 데이터 ===== */
 const state = {
-  currentScreen: 'home',
+  currentScreen: 'newtab',  // 새 탭 모드를 default (브라우저 홈 페이지 패러다임)
   currentFolderId: null,
   selectedLinkId: null,
   expandedHistory: new Set(),
@@ -233,6 +233,7 @@ function renderSidebar() {
 
   // 현재 화면 sb 활성
   $$('.sb-item').forEach(b => b.classList.remove('active'));
+  if (state.currentScreen === 'newtab') $('.sb-item[data-screen="newtab"]').classList.add('active');
   if (state.currentScreen === 'home') $('.sb-item[data-screen="home"]').classList.add('active');
   if (state.currentScreen === 'todos') $('.sb-item[data-screen="todos"]').classList.add('active');
   if (state.currentScreen === 'folder' && state.currentFolderId) {
@@ -315,9 +316,177 @@ function cardHtml(link) {
 
 /* ===== 화면 렌더 ===== */
 function renderScreen() {
-  if (state.currentScreen === 'home') renderHome();
+  if (state.currentScreen === 'newtab') renderNewtab();
+  else if (state.currentScreen === 'home') renderHome();
   else if (state.currentScreen === 'todos') renderTodos();
   else if (state.currentScreen === 'folder') renderFolder();
+}
+
+function renderNewtab() {
+  const hour = new Date().getHours();
+  const period = hour < 6 ? '새벽' : hour < 12 ? '아침' : hour < 18 ? '오후' : '저녁';
+  const greeting = `안녕 ${state.user.name}, 좋은 ${period}이에요`;
+  const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+  // 오늘 할 일 — 미완료 + (오늘 due 또는 반복 today)
+  const allTodos = [];
+  state.links.forEach(link => (link.todos||[]).forEach(todo => allTodos.push({ link, todo })));
+  const todayTodos = allTodos
+    .filter(({todo}) => !isTodoActiveCompleted(todo))
+    .filter(({todo}) => {
+      if (todo.notifyMode === 'once') return todo.notifyAt && todo.notifyAt < now + day*2;
+      if (todo.notifyMode === 'recurring') {
+        const todayWd = new Date().getDay();
+        return (todo.weekdays||[]).includes(todayWd);
+      }
+      return false;
+    })
+    .sort((a,b) => (a.todo.notifyAt||Infinity) - (b.todo.notifyAt||Infinity))
+    .slice(0, 6);
+
+  // 최근 저장 — 최근 7일, 4개
+  const recent = [...state.links]
+    .filter(l => now - l.createdAt < day * 7)
+    .sort((a,b) => b.createdAt - a.createdAt)
+    .slice(0, 4);
+
+  // 자주 가는 폴더 — 링크 많은 순 (미분류 제외), 6개
+  const popularFolders = state.folders
+    .filter(f => f.id !== 'f-default')
+    .map(f => ({ folder: f, count: state.links.filter(l => l.folderId === f.id).length }))
+    .filter(x => x.count > 0)
+    .sort((a,b) => b.count - a.count)
+    .slice(0, 6);
+
+  $('#content').innerHTML = `
+    <div class="newtab">
+      <div class="newtab-hero">
+        <div class="newtab-brand">QLINK</div>
+        <div class="newtab-greeting">
+          <h1>${greeting} <span style="font-size:24px">${state.user.avatar}</span></h1>
+          <p>${dateStr} · ${timeStr}</p>
+        </div>
+        <div class="newtab-search-wrap">
+          <div class="newtab-search">
+            <span class="icon">🔍</span>
+            <input id="newtab-input" placeholder="웹 검색 또는 내 링크 검색…" autocomplete="off" />
+            <button class="newtab-search-btn">검색</button>
+          </div>
+          <div class="newtab-search-modes">
+            <button class="chip active" data-mode="all">🔮 통합</button>
+            <button class="chip" data-mode="links">◎ 내 링크</button>
+            <button class="chip" data-mode="web">🌐 웹</button>
+          </div>
+        </div>
+        <div class="newtab-quick-actions">
+          <button class="newtab-quick-action" data-action="new-link">＋ 새 링크 <span class="kbd">N</span></button>
+          <button class="newtab-quick-action" data-action="todos">✅ 할일 ${todayTodos.length}</button>
+          <button class="newtab-quick-action" data-action="all">📚 전체 보기</button>
+        </div>
+      </div>
+
+      ${todayTodos.length > 0 ? `
+        <div class="newtab-section">
+          <div class="newtab-section-header">
+            <h3>📌 오늘 할 일 <span class="count">${todayTodos.length}</span></h3>
+            <button class="more" data-go="todos">전체 →</button>
+          </div>
+          <div class="newtab-todo-grid">
+            ${todayTodos.map(({link, todo}) => {
+              const isOver = isTodoOverdue(todo);
+              const badge = fmtTodoBadge(todo);
+              return `<div class="newtab-todo" data-link-id="${link.id}" data-todo-id="${todo.id}">
+                <div class="check" data-toggle="${link.id}|${todo.id}"></div>
+                <div class="body">
+                  <div class="title">${escapeHtml(todo.title)}</div>
+                  <div class="source">${link.domain} · ${escapeHtml(link.title)}</div>
+                  ${badge ? `<div class="badge ${isOver ? 'overdue' : ''}">${badge}${isOver ? ' (지남)' : ''}</div>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+
+      ${recent.length > 0 ? `
+        <div class="newtab-section">
+          <div class="newtab-section-header">
+            <h3>📚 최근 저장 <span class="count">${recent.length}</span></h3>
+            <button class="more" data-go="home">전체 →</button>
+          </div>
+          <div class="card-grid">${recent.map(cardHtml).join('')}</div>
+        </div>` : ''}
+
+      ${popularFolders.length > 0 ? `
+        <div class="newtab-section">
+          <div class="newtab-section-header">
+            <h3>📂 자주 가는 폴더</h3>
+          </div>
+          <div class="newtab-folders">
+            ${popularFolders.map(({folder, count}) => `
+              <button class="newtab-folder" data-folder-id="${folder.id}">
+                <span>${folder.emoji}</span>
+                <span>${escapeHtml(folder.name)}</span>
+                <span class="count">${count}</span>
+                ${folder.shared ? '<span class="count">👥 ' + folder.members.length + '명</span>' : ''}
+              </button>`).join('')}
+          </div>
+        </div>` : ''}
+
+      <div class="newtab-hint">
+        <kbd>N</kbd> 새 링크 · <kbd>⌘K</kbd> 검색 · <kbd>?</kbd> 단축키 도움말 · 설정에서 <kbd>홈화면 모드</kbd> 토글
+      </div>
+    </div>
+  `;
+
+  // 입력 포커스
+  setTimeout(() => $('#newtab-input')?.focus({ preventScroll: true }), 50);
+
+  // 이벤트
+  $('#newtab-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const q = e.target.value.trim();
+      if (!q) return;
+      const mode = $('.newtab-search-modes .chip.active')?.dataset.mode || 'all';
+      if (mode === 'web') {
+        // 시연: 웹 검색은 새 창
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank');
+      } else {
+        openSearchModal();
+        $('#search-input').value = q;
+        renderSearchResults(q);
+      }
+    }
+  });
+  $$('.newtab-search-modes .chip').forEach(b => b.onclick = () => {
+    $$('.newtab-search-modes .chip').forEach(c => c.classList.remove('active'));
+    b.classList.add('active');
+  });
+  $$('.newtab-quick-action').forEach(b => b.onclick = () => {
+    const a = b.dataset.action;
+    if (a === 'new-link') openAddModal();
+    else if (a === 'todos') { state.currentScreen = 'todos'; renderAll(); }
+    else if (a === 'all') { state.currentScreen = 'home'; renderAll(); }
+  });
+  $$('.newtab-section [data-go]').forEach(b => b.onclick = () => {
+    state.currentScreen = b.dataset.go; renderAll();
+  });
+  $$('.newtab-folder').forEach(b => b.onclick = () => {
+    state.currentScreen = 'folder';
+    state.currentFolderId = b.dataset.folderId;
+    renderAll();
+  });
+  $$('.newtab-todo').forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.closest('.check')) {
+        const [linkId, todoId] = e.target.closest('.check').dataset.toggle.split('|');
+        toggleTodoComplete(linkId, todoId);
+        return;
+      }
+      state.selectedLinkId = row.dataset.linkId; renderDetail();
+    };
+  });
+  bindCardEvents();
 }
 
 function renderHome() {
@@ -816,8 +985,4 @@ function renderAll() { renderSidebar(); renderScreen(); renderDetail(); }
 renderAll();
 bindGlobalEvents();
 
-// 첫 진입 시 선택된 카드 (시연용)
-setTimeout(() => {
-  state.selectedLinkId = 'l1';
-  renderAll();
-}, 100);
+// 첫 진입: 새 탭 모드. 시연을 위해 자동 선택 X
