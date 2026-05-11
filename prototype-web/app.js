@@ -280,22 +280,21 @@ function cardHtml(link) {
     const isDone = isTodoActiveCompleted(t);
     const isOver = isTodoOverdue(t);
     const badge = fmtTodoBadge(t);
+    // 공유 폴더의 todo만 가시성 아이콘 표시. 인라인 prefix (앞에 작은 자물쇠/사람 아이콘)
+    const visIcon = isFolderShared
+      ? (t.visibility === 'public' ? `<span class="card-todo-vis public" title="공유자에게 공개">👥</span>` : `<span class="card-todo-vis" title="나만">🔒</span>`)
+      : '';
     return `<div class="card-todo-line ${isDone ? 'is-done' : ''}">
       <span class="check">${isDone ? '✓' : ''}</span>
+      ${visIcon}
       <span class="text">${escapeHtml(t.title)}</span>
       ${badge ? `<span class="card-todo-badge ${isOver && !isDone ? 'overdue' : ''}">${badge}</span>` : ''}
     </div>`;
   }).join('');
 
   const authorAvatar = link.author ? `<span class="author-avatar" title="${link.author.name}">${link.author.avatar}</span>` : '';
-  const visBadge = isFolderShared && todos.some(t => t.visibility === 'public')
-    ? `<span class="card-vis-badge public">👥 공유 할일</span>`
-    : isFolderShared && todos.length > 0
-      ? `<span class="card-vis-badge">🔒 나만</span>`
-      : '';
 
   return `<article class="card ${state.selectedLinkId === link.id ? 'active' : ''}" data-id="${link.id}">
-    ${visBadge}
     <div class="card-actions">
       <button class="card-act" title="원본 열기" data-act="open">↗</button>
       <button class="card-act" title="폴더 이동" data-act="move">📁</button>
@@ -447,9 +446,11 @@ function todoRowHtml(link, todo) {
   return `<div class="todo-row ${isOver ? 'overdue' : ''}" data-link-id="${link.id}">
     <div class="todo-row-favicon"><img src="${faviconFor(link.url)}" style="width:14px;height:14px" onerror="this.style.display='none';this.parentElement.textContent='🔗'"></div>
     <div class="todo-row-main">
-      <div class="todo-row-title ${isDone ? 'is-done' : ''}">${escapeHtml(todo.title)}${isShared && todo.visibility === 'public' ? '<span class="todo-vis-badge">👥 공유</span>' : ''}</div>
+      <div class="todo-row-title ${isDone ? 'is-done' : ''}">${escapeHtml(todo.title)}</div>
       <div class="todo-row-source">${link.domain} · ${escapeHtml(link.title)}</div>
       ${badge ? `<div class="todo-row-badge ${isOver ? 'overdue' : ''}">${badge}${isOver ? ' (지남)' : ''}</div>` : ''}
+      ${isShared && todo.visibility === 'public' ? `<div class="todo-vis-row public" style="margin-top:4px">👥 공유 할 일</div>` : ''}
+      ${isShared && todo.visibility !== 'public' ? `<div class="todo-vis-row" style="margin-top:4px">🔒 나만 보기</div>` : ''}
       ${historyHtml}
     </div>
     <button class="todo-check ${isDone ? 'checked' : ''}" data-todo-id="${todo.id}" data-link-id="${link.id}" title="완료 체크">${isDone ? '✓' : ''}</button>
@@ -532,8 +533,8 @@ function renderDetail() {
       const expanded = state.expandedHistory.has(t.id);
       const visBadge = isShared
         ? (t.visibility === 'public'
-            ? `<span class="todo-vis-badge">👥 공유 ${(t.acceptances||[]).length > 0 ? `· ${(t.acceptances||[]).length}명 수락` : ''}</span>`
-            : `<span class="todo-vis-badge" style="background:var(--qlink-surface-2);color:var(--qlink-text-muted)">🔒 나만</span>`)
+            ? `<div class="todo-vis-row public">👥 공유 할 일${(t.acceptances||[]).length > 0 ? ` · <strong>${(t.acceptances||[]).length}명 수락</strong>` : ' · 아직 수락 없음'}</div>`
+            : `<div class="todo-vis-row">🔒 나만 보기</div>`)
         : '';
       const historyBlock = (t.notifyMode === 'recurring' && completions.length > 0) ? `
         <button class="todo-history-toggle" data-detail-history="${t.id}">
@@ -549,8 +550,9 @@ function renderDetail() {
       return `<div class="todo-display ${isDone ? 'is-done' : ''}">
         <div class="todo-check ${isDone ? 'checked' : ''}" data-detail-todo="${t.id}" data-detail-link="${link.id}">${isDone ? '✓' : ''}</div>
         <div class="todo-display-body">
-          <div class="todo-display-text">${escapeHtml(t.title)}${visBadge}</div>
+          <div class="todo-display-text">${escapeHtml(t.title)}</div>
           ${badge ? `<div class="todo-display-badge ${isOver ? 'overdue' : ''}">${badge}${isOver ? ' (지남)' : ''}</div>` : ''}
+          ${visBadge}
           ${historyBlock}
         </div>
       </div>`;
