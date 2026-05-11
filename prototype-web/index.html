@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko" data-theme="light" data-accent="pink">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1024" />
+  <title>QLINK — 웹 프로토타입 (Desktop)</title>
+  <meta name="description" content="QLINK 데스크톱 웹 UI/UX 미리보기 (정적 목업)" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- ============== 사이드바 ============== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">Q</div>
+        <span class="brand-text">QLINK</span>
+      </div>
+
+      <button class="sb-cta" id="btn-new-link">
+        <span>＋ 새 링크</span>
+        <span class="kbd">N</span>
+      </button>
+
+      <nav class="sb-nav">
+        <button class="sb-item active" data-screen="home">
+          <span class="icon">🏠</span><span class="label">홈</span><span class="count" id="count-home">14</span>
+        </button>
+        <button class="sb-item" data-screen="todos">
+          <span class="icon">✅</span><span class="label">할일</span><span class="count" id="count-todos">7</span>
+        </button>
+        <button class="sb-item" id="btn-search-open">
+          <span class="icon">🔍</span><span class="label">검색</span><span class="kbd">⌘K</span>
+        </button>
+      </nav>
+
+      <div class="sb-section">
+        <span>내 폴더</span>
+        <span class="count" id="count-myfolders">4</span>
+      </div>
+      <div class="sb-nav" id="my-folders"></div>
+      <button class="sb-section-add" data-action="add-folder">＋ 폴더 추가</button>
+
+      <div class="sb-section">
+        <span>공유 폴더</span>
+        <span class="count" id="count-sharedfolders">2</span>
+      </div>
+      <div class="sb-nav" id="shared-folders"></div>
+      <button class="sb-section-add" data-action="join-shared">＋ 공유 참여</button>
+
+      <div class="sb-footer">
+        <div class="theme-switcher" style="margin-bottom:8px">
+          <div class="theme-swatch pink selected" data-accent="pink" title="핑크"></div>
+          <div class="theme-swatch blue" data-accent="blue" title="블루"></div>
+          <div class="theme-swatch gray" data-accent="gray" title="그레이"></div>
+          <button class="icon-btn" id="btn-theme-toggle" style="width:22px;height:22px;font-size:12px;margin-left:auto" title="다크/라이트">🌙</button>
+        </div>
+        <div class="sb-profile">
+          <span class="sb-profile-avatar">🌸</span>
+          <div class="sb-profile-text">
+            <span class="sb-profile-name">지훈</span>
+            <span class="sb-profile-email">jihoon@qlink.app</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============== 메인 ============== -->
+    <main class="main">
+      <div class="topbar">
+        <button class="topbar-search" id="topbar-search">
+          <span class="icon">🔍</span>
+          <span>링크·요약·태그 검색…</span>
+          <span class="kbd">⌘K</span>
+        </button>
+        <div class="topbar-actions">
+          <button class="icon-btn" title="알림">🔔</button>
+          <button class="icon-btn" title="설정">⚙</button>
+        </div>
+      </div>
+
+      <div class="content" id="content"><!-- screens rendered here --></div>
+    </main>
+
+    <!-- ============== 우측 상세 패널 (조건부) ============== -->
+    <aside class="detail-panel" id="detail-panel" hidden><!-- detail rendered here --></aside>
+  </div>
+
+  <!-- ============== 검색 모달 (⌘K) ============== -->
+  <div class="modal-backdrop" id="search-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <span class="icon">🔍</span>
+        <input id="search-input" placeholder="링크·요약·태그·폴더 검색…" autocomplete="off" />
+        <button class="icon-btn" data-close="search-modal" style="border:none">✕</button>
+      </div>
+      <div class="modal-body" id="search-results"></div>
+      <div class="modal-footer">
+        <span><span class="kbd">↑↓</span> 이동</span>
+        <span><span class="kbd">Enter</span> 열기</span>
+        <span><span class="kbd">Esc</span> 닫기</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 링크 추가 모달 (N) ============== -->
+  <div class="modal-backdrop" id="add-modal" hidden>
+    <div class="modal add-modal">
+      <div class="modal-header">
+        <span class="icon">＋</span>
+        <span style="font-size:14px;font-weight:700">새 링크 추가</span>
+        <button class="icon-btn" data-close="add-modal" style="border:none;margin-left:auto">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="add-body">
+          <div class="field-row">
+            <div class="field-label">URL <span style="color:var(--qlink-primary);font-weight:600;margin-left:6px">📋 클립보드 자동 감지</span></div>
+            <input class="input" id="add-url" value="https://www.leetcode.com/problems/two-sum" />
+          </div>
+          <div class="field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <div class="field-label">폴더</div>
+              <select class="input" id="add-folder"></select>
+            </div>
+            <div>
+              <div class="field-label">메모 (선택)</div>
+              <input class="input" placeholder="간단한 메모" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">✅ 할 일 (선택, 여러 개 가능)</div>
+            <div id="add-todos"></div>
+            <button class="btn-add-row" id="btn-add-todo-row">＋ 할 일 추가</button>
+          </div>
+        </div>
+      </div>
+      <div class="add-actions">
+        <button class="btn" data-close="add-modal">취소</button>
+        <button class="btn primary">저장 및 AI 요약</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shortcut-hint">
+    <span><kbd>⌘K</kbd> 검색</span>
+    <span><kbd>N</kbd> 새 링크</span>
+    <span><kbd>J/K</kbd> 이동</span>
+    <span><kbd>?</kbd> 도움말</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
