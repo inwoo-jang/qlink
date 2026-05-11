@@ -67,6 +67,7 @@
     <!-- ============== 메인 ============== -->
     <main class="main">
       <div class="topbar">
+        <button class="sidebar-toggle" id="btn-sidebar-toggle" title="메뉴">☰</button>
         <button class="topbar-search" id="topbar-search">
           <span class="icon">🔍</span>
           <span>링크·요약·태그 검색…</span>
@@ -83,6 +84,9 @@
 
     <!-- ============== 우측 상세 패널 (조건부) ============== -->
     <aside class="detail-panel" id="detail-panel" hidden><!-- detail rendered here --></aside>
+
+    <!-- overlay backdrop (좁은 화면에서 사이드바·상세 패널 닫기용) -->
+    <div class="overlay-backdrop" id="overlay-backdrop"></div>
   </div>
 
   <!-- ============== 검색 모달 (⌘K) ============== -->

@@ -113,15 +113,83 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar-thumb { background: var(--qlink-border); border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ===== 전체 레이아웃 ===== */
+/* ===== 전체 레이아웃 (반응형) =====
+   - 단순 grid 대신 flex + media: 분할창·좁은 viewport 대응
+   - 1600px 미만: 상세 패널은 inline 컬럼 아닌 우측 overlay 슬라이드
+   - 960px 미만: 사이드바 자동 숨김 + 햄버거 토글
+*/
 .app {
-  display: grid;
-  grid-template-columns: 260px 1fr;
+  display: flex;
   height: 100vh;
+  overflow: hidden;
 }
-.app.has-panel {
-  grid-template-columns: 260px 1fr 440px;
+.sidebar { width: 260px; flex-shrink: 0; }
+.main { flex: 1; min-width: 0; }
+
+@media (max-width: 1180px) {
+  .sidebar { width: 220px; }
 }
+@media (max-width: 960px) {
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    z-index: 60; transform: translateX(-100%);
+    transition: transform 0.25s; box-shadow: 0 0 30px rgba(0,0,0,0.2);
+  }
+  .app.sidebar-open .sidebar { transform: translateX(0); }
+  .sidebar-toggle { display: inline-flex !important; }
+}
+
+/* 상세 패널: 1600px 이상에서만 inline 컬럼, 그 외엔 우측 overlay */
+.detail-panel {
+  width: min(460px, 90vw);
+  flex-shrink: 0;
+}
+@media (max-width: 1599px) {
+  .detail-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    z-index: 55;
+    box-shadow: -8px 0 28px rgba(0,0,0,0.12);
+    transition: transform 0.25s;
+  }
+  .detail-panel[hidden] { display: flex; transform: translateX(100%); }
+  .app:not(.has-panel) .detail-panel { transform: translateX(100%); pointer-events: none; }
+}
+@media (min-width: 1600px) {
+  .detail-panel { width: 440px; }
+  .detail-panel[hidden] { display: none !important; }
+}
+@media (max-width: 720px) {
+  .detail-panel { width: 100vw; }
+}
+
+/* 모바일 backdrop (사이드바·detail overlay용) */
+.overlay-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 50;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.app.sidebar-open .overlay-backdrop,
+.app.detail-overlay .overlay-backdrop {
+  opacity: 1; pointer-events: auto;
+}
+@media (min-width: 1600px) {
+  .app.detail-overlay .overlay-backdrop { opacity: 0; pointer-events: none; }
+}
+@media (min-width: 961px) {
+  .app.sidebar-open:not(.detail-overlay) .overlay-backdrop { opacity: 0; pointer-events: none; }
+}
+
+.sidebar-toggle {
+  display: none;
+  width: 36px; height: 36px;
+  background: transparent; border: 1px solid var(--qlink-border-soft);
+  border-radius: 8px; font-size: 16px;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-toggle:hover { background: var(--qlink-surface-2); }
 
 /* ===== 사이드바 ===== */
 .sidebar {
@@ -350,16 +418,14 @@ a { color: inherit; text-decoration: none; }
 .chip.active:hover { color: white; }
 .chip .count { font-size: 11px; opacity: 0.8; margin-left: 4px; }
 
-/* ===== 카드 그리드 ===== */
+/* ===== 카드 그리드 (auto-fill로 viewport·패널 폭 자동 적응) ===== */
 .card-grid {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
-@media (min-width: 1440px) { .card-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1920px) {
-  .card-grid { grid-template-columns: repeat(4, 1fr); }
-  .app.has-panel .card-grid { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 1440px) {
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 }
 
 .card {
@@ -399,6 +465,8 @@ a { color: inherit; text-decoration: none; }
   font-size: 11px; color: var(--qlink-text-muted);
   font-weight: 600; letter-spacing: 0.3px;
   display: flex; align-items: center; gap: 6px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  min-width: 0;
 }
 .card-domain .author-avatar {
   width: 16px; height: 16px;

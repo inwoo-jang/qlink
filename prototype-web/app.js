@@ -513,13 +513,17 @@ function toggleTodoComplete(linkId, todoId) {
 function renderDetail() {
   const panel = $('#detail-panel');
   const link = state.selectedLinkId ? getLink(state.selectedLinkId) : null;
+  const app = $('#app');
   if (!link) {
     panel.hidden = true;
-    $('#app').classList.remove('has-panel');
+    app.classList.remove('has-panel', 'detail-overlay');
     return;
   }
   panel.hidden = false;
-  $('#app').classList.add('has-panel');
+  app.classList.add('has-panel');
+  // 1600px 미만이면 overlay 모드 (backdrop 표시)
+  if (window.innerWidth < 1600) app.classList.add('detail-overlay');
+  else app.classList.remove('detail-overlay');
   const folder = getFolder(link.folderId);
   const isShared = folder?.shared;
 
@@ -754,6 +758,26 @@ function bindGlobalEvents() {
   $('#topbar-search').onclick = openSearchModal;
   $('#btn-search-open').onclick = openSearchModal;
   $('#btn-new-link').onclick = openAddModal;
+
+  // 사이드바 토글 (960px 미만)
+  $('#btn-sidebar-toggle').onclick = () => $('#app').classList.toggle('sidebar-open');
+
+  // backdrop 클릭 → 사이드바·상세 패널 닫기
+  $('#overlay-backdrop').onclick = () => {
+    const app = $('#app');
+    if (app.classList.contains('sidebar-open')) {
+      app.classList.remove('sidebar-open');
+    } else if (app.classList.contains('detail-overlay')) {
+      state.selectedLinkId = null;
+      renderDetail();
+      $$('.card').forEach(c => c.classList.remove('active'));
+    }
+  };
+
+  // viewport 크기 변화 → 상세 패널 모드 재계산
+  window.addEventListener('resize', () => {
+    if (state.selectedLinkId) renderDetail();
+  });
   $$('[data-close]').forEach(btn => btn.onclick = () => $(`#${btn.dataset.close}`).hidden = true);
   $('#search-input').oninput = (e) => renderSearchResults(e.target.value);
   $('#btn-add-todo-row').onclick = () => { addModalTodos.push(createTodoDraft()); renderAddTodos(); };
