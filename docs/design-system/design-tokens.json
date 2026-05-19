@@ -1,0 +1,322 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$meta": {
+    "name": "QLINK Design Tokens",
+    "version": "0.1.0",
+    "source": ["prototype/styles.css", "prototype-web/styles.css"],
+    "convention": "shadcn",
+    "platform": "tailwind 3.4.17 + NativeWind (postcss)",
+    "notes": [
+      "shadcn 표준 토큰명을 우선 사용, prototype 고유 토큰은 의미 보존을 위해 확장 토큰으로 분리.",
+      "color 값은 HSL 채널만 (`H S% L%`) 저장 — CSS에서 `hsl(var(--token))` 형태로 소비.",
+      "themeAccentMatrix: light/dark × pink/blue/gray 의 6개 조합. pink는 base, blue/gray는 override."
+    ]
+  },
+
+  "color": {
+    "$description": "shadcn 표준 토큰 + qlink 확장. 모든 값은 HSL 채널 문자열 (`H S% L%`).",
+
+    "base": {
+      "background":            { "light": "330 100% 98.4%", "dark": "285 38% 9%"  },
+      "foreground":            { "light": "326 39% 17%",    "dark": "343 100% 95%" },
+      "card":                  { "light": "0 0% 100%",      "dark": "283 33% 15%" },
+      "card-foreground":       { "light": "326 39% 17%",    "dark": "343 100% 95%" },
+      "popover":               { "light": "0 0% 100%",      "dark": "283 33% 15%" },
+      "popover-foreground":    { "light": "326 39% 17%",    "dark": "343 100% 95%" },
+      "primary":               { "light": "338 100% 71%",   "dark": "351 100% 78%" },
+      "primary-foreground":    { "light": "0 0% 100%",      "dark": "326 39% 17%" },
+      "secondary":             { "light": "330 79% 94%",    "dark": "284 31% 19%" },
+      "secondary-foreground":  { "light": "326 39% 17%",    "dark": "343 100% 95%" },
+      "muted":                 { "light": "335 100% 96.7%", "dark": "284 31% 19%" },
+      "muted-foreground":      { "light": "327 18% 52%",    "dark": "331 36% 78%" },
+      "accent":                { "light": "330 79% 94%",    "dark": "284 31% 19%" },
+      "accent-foreground":     { "light": "338 100% 45%",   "dark": "351 100% 78%" },
+      "destructive":           { "light": "0 84% 60%",      "dark": "0 70% 59%" },
+      "destructive-foreground":{ "light": "0 0% 100%",      "dark": "0 0% 100%" },
+      "border":                { "light": "340 100% 88%",   "dark": "326 24% 23%" },
+      "input":                 { "light": "340 100% 88%",   "dark": "309 25% 18%" },
+      "ring":                  { "light": "338 100% 71%",   "dark": "351 100% 78%" }
+    },
+
+    "chart": {
+      "chart-1": { "light": "338 100% 71%", "dark": "351 100% 78%" },
+      "chart-2": { "light": "282 65% 73%",  "dark": "270 100% 82%" },
+      "chart-3": { "light": "218 100% 65%", "dark": "225 100% 78%" },
+      "chart-4": { "light": "50 100% 62%",  "dark": "50 100% 70%" },
+      "chart-5": { "light": "160 84% 39%",  "dark": "160 60% 55%" }
+    },
+
+    "sidebar": {
+      "$description": "shadcn v4 sidebar 전용 토큰. 메인 콘텐츠와 시각적으로 분리되는 네비게이션 영역.",
+      "sidebar":                     { "light": "335 100% 96.7%", "dark": "290 30% 11%" },
+      "sidebar-foreground":          { "light": "326 39% 17%",    "dark": "343 100% 95%" },
+      "sidebar-primary":             { "light": "338 100% 71%",   "dark": "351 100% 78%" },
+      "sidebar-primary-foreground":  { "light": "0 0% 100%",      "dark": "326 39% 17%" },
+      "sidebar-accent":              { "light": "0 0% 100%",      "dark": "283 33% 15%" },
+      "sidebar-accent-foreground":   { "light": "338 100% 71%",   "dark": "351 100% 78%" },
+      "sidebar-border":              { "light": "327 56% 92%",    "dark": "309 25% 18%" },
+      "sidebar-ring":                { "light": "338 100% 71%",   "dark": "351 100% 78%" }
+    },
+
+    "extended": {
+      "$description": "prototype 고유 / shadcn 미정의. semantic 의미 보존을 위해 확장 그룹.",
+      "primary-2":           { "light": "282 65% 73%",  "dark": "270 100% 82%" },
+      "success":             { "light": "160 84% 39%",  "dark": "160 60% 55%" },
+      "success-foreground":  { "light": "0 0% 100%",    "dark": "0 0% 100%" },
+      "warning":             { "light": "38 92% 50%",   "dark": "38 92% 60%" },
+      "warning-foreground":  { "light": "0 0% 100%",    "dark": "285 38% 9%" },
+      "accent-yellow":       { "light": "50 100% 62%",  "dark": "50 100% 70%" },
+      "border-soft":         { "light": "327 56% 92%",  "dark": "309 25% 18%" },
+      "surface":             { "light": "0 0% 100%",    "dark": "283 33% 15%" },
+      "surface-elevated":    { "light": "335 100% 96.7%", "dark": "284 31% 19%" },
+      "overlay":             { "light": "0 0% 0% / 0.35", "dark": "0 0% 0% / 0.5" },
+      "glow-rgb":            { "light": "255, 107, 157", "dark": "255, 143, 163" }
+    }
+  },
+
+  "gradient": {
+    "grad-primary": {
+      "light": "linear-gradient(135deg, hsl(338 100% 71%) 0%, hsl(282 65% 73%) 50%, hsl(225 100% 78%) 100%)",
+      "dark":  "linear-gradient(135deg, hsl(351 100% 78%) 0%, hsl(270 100% 82%) 50%, hsl(225 100% 80%) 100%)"
+    },
+    "grad-soft": {
+      "light": "linear-gradient(135deg, hsl(348 100% 95%) 0%, hsl(280 100% 95%) 100%)",
+      "dark":  "linear-gradient(135deg, hsl(283 33% 15%) 0%, hsl(284 31% 19%) 100%)"
+    }
+  },
+
+  "typography": {
+    "fontFamily": {
+      "sans": "'Pretendard', -apple-system, BlinkMacSystemFont, 'SF Pro KR', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
+      "display": "'Outfit', 'Pretendard', -apple-system, sans-serif",
+      "mono": "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+    },
+    "fontSize": {
+      "$description": "px → rem 변환은 NativeWind 측에서 처리. UI 텍스트는 11~14, heading은 16~24.",
+      "2xs": "10px",
+      "xs":  "11px",
+      "sm":  "12px",
+      "base":"13px",
+      "md":  "14px",
+      "lg":  "16px",
+      "xl":  "18px",
+      "2xl": "20px",
+      "3xl": "22px",
+      "4xl": "24px",
+      "5xl": "28px",
+      "hero":"48px"
+    },
+    "fontWeight": {
+      "regular":  "400",
+      "medium":   "500",
+      "semibold": "600",
+      "bold":     "700",
+      "extrabold":"800",
+      "black":    "900"
+    },
+    "lineHeight": {
+      "tight":  "1.2",
+      "snug":   "1.35",
+      "normal": "1.5",
+      "relaxed":"1.6",
+      "loose":  "1.7"
+    },
+    "letterSpacing": {
+      "tighter": "-0.02em",
+      "tight":   "-0.01em",
+      "normal":  "0",
+      "wide":    "0.04em",
+      "wider":   "0.05em",
+      "widest":  "0.06em",
+      "uppercase":"0.5px"
+    }
+  },
+
+  "radius": {
+    "$description": "shadcn radius 변수 (--radius) 기본 0.875rem(14px). px·rem 혼용은 NativeWind에서 일괄 변환.",
+    "none": "0",
+    "xs":   "4px",
+    "sm":   "6px",
+    "md":   "8px",
+    "lg":   "10px",
+    "xl":   "12px",
+    "2xl":  "14px",
+    "3xl":  "20px",
+    "4xl":  "28px",
+    "pill": "9999px",
+    "full": "9999px"
+  },
+
+  "spacing": {
+    "$description": "8px grid 기반. 카드 padding 14, gap 8~16 사용 빈도 가장 높음.",
+    "0":  "0",
+    "0.5":"2px",
+    "1":  "4px",
+    "1.5":"6px",
+    "2":  "8px",
+    "2.5":"10px",
+    "3":  "12px",
+    "3.5":"14px",
+    "4":  "16px",
+    "5":  "20px",
+    "6":  "24px",
+    "7":  "28px",
+    "8":  "32px",
+    "10": "40px",
+    "12": "48px",
+    "14": "56px",
+    "16": "64px",
+    "20": "80px"
+  },
+
+  "shadow": {
+    "$description": "primary glow 컬러 기반 동적 그림자. dark 모드는 opacity 가산.",
+    "sm":   { "light": "0 1px 3px hsla(338 100% 71% / 0.08)",  "dark": "0 1px 3px hsla(351 100% 78% / 0.15)" },
+    "md":   { "light": "0 4px 16px hsla(338 100% 71% / 0.15)", "dark": "0 4px 16px hsla(351 100% 78% / 0.25)" },
+    "lg":   { "light": "0 12px 32px hsla(338 100% 71% / 0.25)","dark": "0 12px 32px hsla(351 100% 78% / 0.40)" },
+    "card": { "light": "0 2px 8px hsla(338 100% 71% / 0.08)",  "dark": "0 2px 8px hsla(351 100% 78% / 0.15)" },
+    "glow": { "light": "0 0 20px hsla(338 100% 71% / 0.35)",   "dark": "0 0 24px hsla(351 100% 78% / 0.55)" },
+    "fab":  { "light": "0 8px 24px hsla(338 100% 71% / 0.50), 0 0 0 4px hsla(0 0% 100% / 0.4)",
+              "dark":  "0 0 32px hsla(351 100% 78% / 0.70), 0 0 0 2px hsl(326 24% 23%)" },
+    "modal":{ "light": "0 24px 60px hsla(0 0% 0% / 0.30)",     "dark": "0 24px 60px hsla(0 0% 0% / 0.60)" }
+  },
+
+  "blur": {
+    "sm":  "6px",
+    "md":  "12px",
+    "lg":  "16px"
+  },
+
+  "zIndex": {
+    "$description": "겹침 레이어 정의. backdrop < sidePanel < sidebar < modal < toast.",
+    "base":      0,
+    "dropdown":  10,
+    "sticky":    20,
+    "fixed":     30,
+    "backdrop":  50,
+    "sidePanel": 55,
+    "sidebar":   60,
+    "modal":     100,
+    "popover":   110,
+    "tooltip":   120,
+    "toast":     130
+  },
+
+  "motion": {
+    "duration": {
+      "fast":   "120ms",
+      "base":   "150ms",
+      "slow":   "200ms",
+      "slower": "300ms"
+    },
+    "easing": {
+      "standard": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "decel":    "cubic-bezier(0, 0, 0.2, 1)",
+      "spring":   "cubic-bezier(0.34, 1.2, 0.64, 1)"
+    }
+  },
+
+  "iconTint": {
+    "$description": "이미지 아이콘에 적용하는 CSS filter — accent에 따라 보정.",
+    "pink": { "light": "brightness(1)",                           "dark": "brightness(1.1)" },
+    "blue": { "light": "hue-rotate(-55deg) saturate(0.95)",       "dark": "hue-rotate(-55deg) saturate(0.95) brightness(1.12)" },
+    "gray": { "light": "grayscale(0.92) brightness(1.05)",        "dark": "grayscale(0.92) brightness(1.2)" }
+  },
+
+  "breakpoint": {
+    "$description": "데스크톱 분할창·모바일 대응. prototype-web 기준.",
+    "sm":   "480px",
+    "md":   "720px",
+    "lg":   "960px",
+    "xl":   "1180px",
+    "2xl":  "1440px",
+    "3xl":  "1600px"
+  },
+
+  "themeAccentMatrix": {
+    "$description": "테마(light/dark) × 액센트(pink/blue/gray) — 6개 조합. base와 다른 토큰만 명시.",
+
+    "pink": {
+      "light": "BASE — color.base + color.sidebar + color.extended",
+      "dark":  "BASE dark"
+    },
+
+    "blue": {
+      "light": {
+        "background":      "214 100% 98%",
+        "foreground":      "218 49% 20%",
+        "muted":           "218 100% 96%",
+        "muted-foreground":"218 19% 51%",
+        "secondary":       "220 100% 93%",
+        "accent":          "220 100% 93%",
+        "border":          "220 100% 88%",
+        "input":           "220 100% 88%",
+        "border-soft":     "217 56% 92%",
+        "primary":         "218 100% 65%",
+        "primary-2":       "220 95% 78%",
+        "ring":            "218 100% 65%",
+        "glow-rgb":        "79, 143, 255",
+        "sidebar":         "218 100% 96%",
+        "sidebar-border":  "217 56% 92%"
+      },
+      "dark": {
+        "background":      "222 43% 9%",
+        "foreground":      "225 100% 95%",
+        "muted":           "222 36% 21%",
+        "muted-foreground":"218 39% 74%",
+        "secondary":       "220 28% 15%",
+        "accent":          "222 36% 21%",
+        "card":            "220 28% 15%",
+        "popover":         "220 28% 15%",
+        "border":          "222 32% 27%",
+        "input":           "222 32% 19%",
+        "border-soft":     "222 32% 19%",
+        "primary":         "220 100% 78%",
+        "primary-2":       "225 100% 85%",
+        "ring":            "220 100% 78%",
+        "glow-rgb":        "143, 179, 255",
+        "sidebar":         "220 36% 12%",
+        "sidebar-border":  "222 32% 19%"
+      }
+    },
+
+    "gray": {
+      "light": {
+        "background":      "240 6% 98%",
+        "foreground":      "217 33% 17%",
+        "muted":           "225 14% 95%",
+        "muted-foreground":"220 9% 46%",
+        "secondary":       "220 14% 91%",
+        "accent":          "220 14% 91%",
+        "border":          "220 13% 84%",
+        "input":           "220 13% 84%",
+        "border-soft":     "220 9% 91%",
+        "primary":         "220 9% 46%",
+        "primary-2":       "220 9% 64%",
+        "ring":            "220 9% 46%",
+        "glow-rgb":        "107, 114, 128",
+        "sidebar":         "225 14% 95%",
+        "sidebar-border":  "220 9% 91%"
+      },
+      "dark": {
+        "background":      "225 17% 10%",
+        "foreground":      "220 14% 91%",
+        "muted":           "222 14% 20%",
+        "muted-foreground":"215 19% 65%",
+        "secondary":       "220 16% 15%",
+        "accent":          "222 14% 20%",
+        "card":            "220 16% 15%",
+        "popover":         "220 16% 15%",
+        "border":          "222 14% 25%",
+        "input":           "220 14% 18%",
+        "border-soft":     "220 14% 18%",
+        "primary":         "218 16% 79%",
+        "primary-2":       "215 19% 65%",
+        "ring":            "218 16% 79%",
+        "glow-rgb":        "192, 200, 213",
+        "sidebar":         "222 16% 13%",
+        "sidebar-border":  "220 14% 18%"
+      }
+    }
+  }
+}
