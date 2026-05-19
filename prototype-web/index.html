@@ -17,22 +17,20 @@
       </div>
 
       <button class="sb-cta" id="btn-new-link">
-        <span>＋ 새 링크</span>
+        <span class="icon">＋</span>
+        <span class="label">새 링크</span>
         <span class="kbd">N</span>
       </button>
 
       <nav class="sb-nav">
         <button class="sb-item active" data-screen="newtab">
-          <span class="icon">🏡</span><span class="label">새 탭</span><span class="kbd" title="브라우저 시작 페이지로 설정하면 매번 여기로 진입">홈</span>
+          <span class="icon">🏡</span><span class="label">홈</span>
         </button>
         <button class="sb-item" data-screen="home">
           <span class="icon">📚</span><span class="label">전체 보기</span><span class="count" id="count-home">14</span>
         </button>
         <button class="sb-item" data-screen="todos">
           <span class="icon">✅</span><span class="label">할일</span><span class="count" id="count-todos">7</span>
-        </button>
-        <button class="sb-item" id="btn-search-open">
-          <span class="icon">🔍</span><span class="label">검색</span><span class="kbd">⌘K</span>
         </button>
       </nav>
 
@@ -144,6 +142,21 @@
       <div class="add-actions">
         <button class="btn" data-close="add-modal">취소</button>
         <button class="btn primary">저장 및 AI 요약</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 바로가기 추가 피커 모달 ============== -->
+  <div class="modal-backdrop" id="shortcut-modal" hidden>
+    <div class="modal" style="width:480px">
+      <div class="modal-header">
+        <span class="icon">⭐</span>
+        <span style="font-size:14px;font-weight:700">바로가기 추가</span>
+        <button class="icon-btn" data-close="shortcut-modal" style="border:none;margin-left:auto">✕</button>
+      </div>
+      <div class="modal-body" id="shortcut-picker-list"></div>
+      <div class="modal-footer">
+        <span>새 탭에서 한 번에 열 수 있도록 즐겨찾기에 고정합니다 (최대 8개)</span>
       </div>
     </div>
   </div>

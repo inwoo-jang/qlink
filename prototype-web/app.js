@@ -80,6 +80,7 @@ const state = {
       id: 'l3', url: 'https://notion.so/q3-marketing-strategy', domain: 'notion.so',
       title: 'Q3 마케팅 전략 — KPI·예산·실행 일정', summary: 'Q3 마케팅 캠페인 전략 문서. 6월 첫 주 회의 준비용.',
       tags: ['marketing', 'team'], folderId: 'f-research', author: null, createdAt: now - day*0.5,
+      pinned: true, shortcutLabel: '노션',
       todos: [
         { id: 't3a', title: '수요일 9시 회의 전 1차 검토', notifyMode: 'once', notifyAt: now + day*2 + hour*0, completed: false, visibility: 'private', completions: [] },
         { id: 't3b', title: '요약 메모 작성', notifyMode: 'once', notifyAt: now + day*3 + hour*9, completed: false, visibility: 'private', completions: [] },
@@ -90,6 +91,7 @@ const state = {
       id: 'l4', url: 'https://www.inflearn.com/course/algorithm-master', domain: 'inflearn.com',
       title: '정보처리기사 알고리즘 마스터', summary: '35편 강의. 시험 2개월 전부터 매일 한 편씩 진도.',
       tags: ['cert', 'algo'], folderId: 'f-study', author: null, createdAt: now - day*4,
+      pinned: true, shortcutLabel: '인프런',
       todos: [
         { id: 't4a', title: '오늘 1편 듣기', notifyMode: 'recurring', weekdays: [1,2,3,4,5], notifyTime: '20:00', endDate: '2026-07-15', completed: false, visibility: 'private',
           completions: [
@@ -101,7 +103,8 @@ const state = {
     {
       id: 'l5', url: 'https://velog.io/@some-dev/react-19-deep-dive', domain: 'velog.io',
       title: 'React 19 변경점 한눈에 보기', summary: 'React 19의 컴파일러·use·Actions·Server Components 변경점 정리.',
-      tags: ['react', 'frontend'], folderId: 'f-research', author: null, createdAt: now - day*3, todos: []
+      tags: ['react', 'frontend'], folderId: 'f-research', author: null, createdAt: now - day*3, todos: [],
+      pinned: true, shortcutLabel: 'velog',
     },
     {
       id: 'l6', url: 'https://blog.naver.com/cafe-list/seongsu', domain: 'blog.naver.com',
@@ -161,7 +164,8 @@ const state = {
     {
       id: 'l13', url: 'https://figma.com/community/file/123', domain: 'figma.com',
       title: 'iOS 18 디자인 가이드', summary: 'Apple HIG 정리 + 컴포넌트 라이브러리.',
-      tags: ['design', 'ios'], folderId: 'f-default', author: null, createdAt: now - hour*3, todos: []
+      tags: ['design', 'ios'], folderId: 'f-default', author: null, createdAt: now - hour*3, todos: [],
+      pinned: true, shortcutLabel: 'Figma',
     },
     {
       id: 'l14', url: 'https://news.hada.io/topic?id=23872', domain: 'news.hada.io',
@@ -296,6 +300,7 @@ function cardHtml(link) {
   const authorAvatar = link.author ? `<span class="author-avatar" title="${link.author.name}">${link.author.avatar}</span>` : '';
 
   return `<article class="card ${state.selectedLinkId === link.id ? 'active' : ''}" data-id="${link.id}">
+    <button class="card-pin ${link.pinned ? 'on' : ''}" data-act="pin" title="${link.pinned ? '바로가기에서 제거' : '바로가기로 추가'}" aria-pressed="${!!link.pinned}">${link.pinned ? '★' : '☆'}</button>
     <div class="card-actions">
       <button class="card-act" title="원본 열기" data-act="open">↗</button>
       <button class="card-act" title="폴더 이동" data-act="move">📁</button>
@@ -359,6 +364,9 @@ function renderNewtab() {
     .sort((a,b) => b.count - a.count)
     .slice(0, 6);
 
+  // 바로가기 (즐겨찾기 고정) — 카드 ★ 또는 + 타일로 추가, 최대 8개
+  const shortcuts = state.links.filter(l => l.pinned).slice(0, 8);
+
   $('#content').innerHTML = `
     <div class="newtab">
       <div class="newtab-hero">
@@ -378,6 +386,19 @@ function renderNewtab() {
             <button class="chip" data-mode="links">◎ 내 링크</button>
             <button class="chip" data-mode="web">🌐 웹</button>
           </div>
+        </div>
+        <div class="newtab-shortcuts">
+          ${shortcuts.map(l => `
+            <button class="newtab-shortcut" data-link-id="${l.id}" title="${escapeHtml(l.title)}">
+              <span class="tile"><img src="${faviconFor(l.url)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='🔗'"></span>
+              <span class="lbl">${escapeHtml(l.shortcutLabel || l.domain.split('.')[0])}</span>
+              <span class="remove-btn" data-unpin="${l.id}" title="바로가기에서 제거">✕</span>
+            </button>
+          `).join('')}
+          ${shortcuts.length < 8 ? `<button class="newtab-shortcut add" data-action="add-shortcut" title="바로가기 추가">
+            <span class="tile">＋</span>
+            <span class="lbl">바로가기 추가</span>
+          </button>` : ''}
         </div>
         <div class="newtab-quick-actions">
           <button class="newtab-quick-action" data-action="new-link">＋ 새 링크 <span class="kbd">N</span></button>
@@ -476,6 +497,16 @@ function renderNewtab() {
     state.currentFolderId = b.dataset.folderId;
     renderAll();
   });
+  $$('.newtab-shortcut[data-link-id]').forEach(b => b.onclick = (e) => {
+    if (e.target.closest('.remove-btn')) {
+      e.stopPropagation();
+      togglePinned(e.target.closest('.remove-btn').dataset.unpin);
+      return;
+    }
+    const link = getLink(b.dataset.linkId);
+    if (link) window.open(link.url, '_blank');
+  });
+  $$('.newtab-shortcut[data-action="add-shortcut"]').forEach(b => b.onclick = openShortcutPicker);
   $$('.newtab-todo').forEach(row => {
     row.onclick = (e) => {
       if (e.target.closest('.check')) {
@@ -631,11 +662,33 @@ function bindCardEvents() {
   $$('.card').forEach(card => {
     card.onclick = (e) => {
       if (e.target.closest('.card-act')) return;
+      if (e.target.closest('.card-pin')) return;
       state.selectedLinkId = card.dataset.id;
       renderDetail();
       $$('.card').forEach(c => c.classList.toggle('active', c.dataset.id === card.dataset.id));
     };
   });
+  $$('.card .card-pin').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      togglePinned(btn.closest('.card').dataset.id);
+    };
+  });
+}
+
+function togglePinned(linkId) {
+  const link = getLink(linkId);
+  if (!link) return;
+  if (!link.pinned) {
+    const pinnedCount = state.links.filter(l => l.pinned).length;
+    if (pinnedCount >= 8) {
+      alert('바로가기는 최대 8개까지 추가할 수 있어요. 먼저 하나를 제거해 주세요.');
+      return;
+    }
+    if (!link.shortcutLabel) link.shortcutLabel = link.domain.split('.')[0];
+  }
+  link.pinned = !link.pinned;
+  renderAll();
 }
 
 function bindTodoRowEvents() {
@@ -762,9 +815,10 @@ function renderDetail() {
     </div>
     <div class="detail-actions">
       <button class="btn primary"><span>↗</span> 원본 열기</button>
-      <button class="btn"><span>📤</span> 공유</button>
+      <button class="btn" id="btn-detail-pin"><span>${link.pinned ? '★' : '☆'}</span> ${link.pinned ? '바로가기 해제' : '바로가기 추가'}</button>
       <button class="btn"><span>📁</span> 폴더 이동</button>
       <button class="btn"><span>⏰</span> 알림 설정</button>
+      <button class="btn"><span>📤</span> 공유</button>
       <button class="btn danger full">🗑 링크 삭제</button>
     </div>
   `;
@@ -772,6 +826,7 @@ function renderDetail() {
   $('#btn-close-detail').onclick = () => {
     state.selectedLinkId = null; renderDetail(); $$('.card').forEach(c => c.classList.remove('active'));
   };
+  $('#btn-detail-pin').onclick = () => togglePinned(link.id);
   $$('.todo-display .todo-check').forEach(btn => {
     btn.onclick = () => toggleTodoComplete(btn.dataset.detailLink, btn.dataset.detailTodo);
   });
@@ -784,6 +839,35 @@ function renderDetail() {
     };
   });
 }
+
+/* ===== 바로가기 추가 피커 ===== */
+function openShortcutPicker() {
+  const modal = $('#shortcut-modal');
+  if (!modal) return;
+  const candidates = state.links.filter(l => !l.pinned)
+    .sort((a,b) => b.createdAt - a.createdAt);
+  const list = $('#shortcut-picker-list');
+  if (candidates.length === 0) {
+    list.innerHTML = `<div class="empty" style="padding:30px 24px"><h3>모든 링크를 이미 고정했어요</h3><p>다른 카드의 ★를 눌러 해제하세요.</p></div>`;
+  } else {
+    list.innerHTML = candidates.map(l => `
+      <div class="shortcut-picker-item" data-pick="${l.id}">
+        <div class="fav"><img src="${faviconFor(l.url)}" alt="" style="width:20px;height:20px" onerror="this.style.display='none';this.parentElement.textContent='🔗'"></div>
+        <div class="meta">
+          <div class="t">${escapeHtml(l.title)}</div>
+          <div class="d">${escapeHtml(l.domain)}</div>
+        </div>
+        <span class="star">☆</span>
+      </div>
+    `).join('');
+    $$('.shortcut-picker-item').forEach(el => el.onclick = () => {
+      togglePinned(el.dataset.pick);
+      modal.hidden = true;
+    });
+  }
+  modal.hidden = false;
+}
+function closeShortcutPicker() { $('#shortcut-modal').hidden = true; }
 
 /* ===== 검색 모달 ===== */
 function openSearchModal() {
@@ -925,7 +1009,6 @@ function bindAddModalEvents() {
 /* ===== 전역 이벤트 ===== */
 function bindGlobalEvents() {
   $('#topbar-search').onclick = openSearchModal;
-  $('#btn-search-open').onclick = openSearchModal;
   $('#btn-new-link').onclick = openAddModal;
 
   // 사이드바 토글 (960px 미만)
