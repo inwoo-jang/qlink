@@ -1,0 +1,9 @@
+[mcp_servers.storybook]
+command = "npx"
+args = [
+    "-y",
+    "storybook-mcp",
+]
+
+[mcp_servers.storybook.env]
+STORYBOOK_URL = "http://localhost:6006"
